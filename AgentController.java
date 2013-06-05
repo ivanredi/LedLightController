@@ -41,7 +41,7 @@ public class AgentController implements OscEventListener
 	public Semaphore controlOscAccess = new Semaphore(1, true);
 	private boolean saveMode;
 	// constructor
-	public AgentController(int radius, boolean saveMode, float maxAgentStepSize)
+	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort)
 	{
 		super();
 		this.radius = radius;
@@ -53,7 +53,7 @@ public class AgentController implements OscEventListener
 		// registerAgentsAndSetDirections();
 
 		// OSC- network listener initialization
-		oscP5 = new OscP5(this, 5001);
+		oscP5 = new OscP5(this, kinectPort);
 	
 	}
 

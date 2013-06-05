@@ -22,7 +22,7 @@ public class Agent implements Point2D
 	
 	// distances
 	private float distanceFromNearestAgent;
-	private float distanceFromCentroid;
+	//private float distanceFromCentroid;
 	
 	// angle form agent to (0, 0) point
 	private float angle;
@@ -36,7 +36,7 @@ public class Agent implements Point2D
 		this.isActive = false;
 		this.nearbyObjectCount = 0;
 		this.distanceFromNearestAgent = 0;
-		this.distanceFromCentroid = 0;
+		//this.distanceFromCentroid = 0;
 		this.angle = 0;
 	}
 	
@@ -104,15 +104,15 @@ public class Agent implements Point2D
 		this.isActive = isActive;
 	}
 	
-	public float getDistanceFromCentroid()
-	{
-		return distanceFromCentroid;
-	}
+	//public float getDistanceFromCentroid()
+	//{
+	//	return distanceFromCentroid;
+	//}
 
-	public void setDistanceFromCentroid(float distanceFromCentroid)
-	{
-		this.distanceFromCentroid = distanceFromCentroid;
-	}
+	//public void setDistanceFromCentroid(float distanceFromCentroid)
+	//{
+	//	this.distanceFromCentroid = distanceFromCentroid;
+	//}
 	
 	public float getAngle()
 	{

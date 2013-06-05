@@ -11,34 +11,43 @@ public class MusicController implements OscEventListener {
 
 	// OSC network variables
 	private OscP5 oscP5;
+	private OscMessage oscMessage;
 	
-	
-	public MusicController() {
+	public MusicController(int musicPort) {
 		super();
 		
 		// OSC- network listener initialization
-		oscP5 = new OscP5(this, 5002);
+		oscP5 = new OscP5(this, musicPort);
 	}
 
 	public void oscEvent(OscMessage theOscMessage) 
 	{
-		int numberOfActiveAgents = theOscMessage.get(0).intValue();
-		int mode = theOscMessage.get(1).intValue();
-		float centroidX = theOscMessage.get(2).floatValue();
-		float centroidY = theOscMessage.get(3).floatValue();
-		System.out.println("MUSIC CONTROLLER: active users in the system = " + numberOfActiveAgents);
-		System.out.println("MUSIC CONTROLLER: mode = " + mode);
-		System.out.println("MUSIC CONTROLLER: centroid coordinates = (" + centroidX + ", " + centroidY + ")");
-		for (int i = 0; i < numberOfActiveAgents; i++) {
-			int currentAgentId = theOscMessage.get(i * 2 + 4).intValue();
-			float currentAgentDistanceFromCentroid = theOscMessage.get(i * 2 + 5).floatValue();
-			System.out.println("MUSIC CONTROLLER: distance from centroid for agent (id = " + currentAgentId + ") = " + currentAgentDistanceFromCentroid);
-		}
+		this.oscMessage = theOscMessage;
 	}
 
+	public void printOscMessages()
+	{
+		int numberOfActiveAgents = this.oscMessage.get(0).intValue();
+		int mode = this.oscMessage.get(1).intValue();
+		float centroidX = this.oscMessage.get(2).floatValue();
+		float centroidY = this.oscMessage.get(3).floatValue();
+		
+		System.out.println("\nOSCPackage from music controller:");
+		System.out.println("|active agents|    |m o d e|    |centroid coordinates|");
+		System.out.println("       " + numberOfActiveAgents + "               " + mode + "         (" + centroidX + ", " + centroidY + ")");
+		
+		System.out.println("|agentId|    |distance from centroid|");
+		for (int i = 0; i < numberOfActiveAgents; i++) {
+			int currentAgentId = this.oscMessage.get(i * 2 + 4).intValue();
+			float currentAgentDistanceFromCentroid = this.oscMessage.get(i * 2 + 5).floatValue();
+			System.out.println("    " + currentAgentId + "               " + currentAgentDistanceFromCentroid);
+		}
+	}
+	
 	public void oscStatus(OscStatus theStatus) 
 	{
 		
 	}
+
 
 }

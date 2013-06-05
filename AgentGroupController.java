@@ -9,9 +9,10 @@ import processing.core.*;
 public class AgentGroupController 
 {
 	public ArrayList<Agent> activeAgentsInSystem;	
+	public ArrayList<Agent> agentsInGroup;
+	
 	public Point2D centroid;
 	
-	private ArrayList<Agent> agentsInGroup;
 	private int mode;
 	private boolean groupIsCreated;
 	private float maxDistanceFromCentroid;
@@ -116,7 +117,7 @@ public class AgentGroupController
 			
 			float agentDistanceFromCentroid = PApplet.dist(agent.getX(), agent.getY(), centroid.getX(), centroid.getY());
 			
-			agent.setDistanceFromCentroid(agentDistanceFromCentroid);
+			// agent.setDistanceFromCentroid(agentDistanceFromCentroid);
 			
 			if (agentDistanceFromCentroid <= maxDistanceFromCentroid) {
 				agentsInGroup.add(agent);
