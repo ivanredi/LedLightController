@@ -27,21 +27,21 @@ public class MusicController implements OscEventListener {
 
 	public void printOscMessages()
 	{
-		int numberOfActiveAgents = this.oscMessage.get(0).intValue();
-		int mode = this.oscMessage.get(1).intValue();
+		int numberOfActiveAgents = this.oscMessage.get(1).intValue();
+		int mode = this.oscMessage.get(0).intValue();
 		float centroidX = this.oscMessage.get(2).floatValue();
 		float centroidY = this.oscMessage.get(3).floatValue();
 		
 		System.out.println("\nOSCPackage from music controller:");
-		System.out.println("|active agents|    |m o d e|    |centroid coordinates|");
-		System.out.println("       " + numberOfActiveAgents + "               " + mode + "         (" + centroidX + ", " + centroidY + ")");
+		System.out.println("|active agents|  |m o d e|  |centroid coordinates|");
+		System.out.println("       " + numberOfActiveAgents + "             " + mode + "       (" + centroidX + ", " + centroidY + ")");
 		
-		System.out.println("|agentId|    |distance from centroid|");
+/*		System.out.println("|agentId|  |distance from centroid|");
 		for (int i = 0; i < numberOfActiveAgents; i++) {
 			int currentAgentId = this.oscMessage.get(i * 2 + 4).intValue();
 			float currentAgentDistanceFromCentroid = this.oscMessage.get(i * 2 + 5).floatValue();
-			System.out.println("    " + currentAgentId + "               " + currentAgentDistanceFromCentroid);
-		}
+			System.out.println("    " + currentAgentId + "              " + currentAgentDistanceFromCentroid);
+		}*/
 	}
 	
 	public void oscStatus(OscStatus theStatus) 
