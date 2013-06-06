@@ -38,8 +38,8 @@ public class LedLightController extends PApplet
 	OscP5 oscP5;	
 	NetAddress eventDestinationForKinectOscPackages;
 	NetAddress eventDestinationForMusicOscPackages;
-	int kinectPort = 7001;
-	int musicPort = 7005;
+	int kinectPort = 7000;
+	int musicPort = 7001;
 	
 	// 2. CONTROLLERS INSTANCES
 	AgentController agentController;
@@ -80,7 +80,7 @@ public class LedLightController extends PApplet
 	// debug and print mode
 	boolean debugMode = true;
 	boolean printMode = true;
-	boolean printAgentsPositions = false;
+	boolean printAgentsPositions = true;
 	boolean fileSaveMode = false;
 	boolean runLedSimulator = false;
 	
