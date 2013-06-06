@@ -359,13 +359,13 @@ public class LedLightController extends PApplet
 		int numberOfActiveAgents = activeAgents.size();
 
 		// create OSC message for music-controller
-		OscMessage oscMessage = new OscMessage("/agentsStatusForMusic");
+		OscMessage oscMessage = new OscMessage("/position");
 
-		// OSC message field = number of active agents (int)
+        // OSC message field = interaction mode (int)
+        oscMessage.add(mode);
+		
+        // OSC message field = number of active agents (int)
 		oscMessage.add(numberOfActiveAgents);
-
-		// OSC message field = interaction mode (int)
-		oscMessage.add(mode);
 
 		// OSC message field = x for centroid (float)
 		oscMessage.add(mappedCentroidPosition.getX());
@@ -373,7 +373,7 @@ public class LedLightController extends PApplet
 		// OSC message field = y for centroid (float)
 		oscMessage.add(mappedCentroidPosition.getY());
 
-		for (int i = 0; i < numberOfActiveAgents; i++) {
+/*		for (int i = 0; i < numberOfActiveAgents; i++) {
 
 			Agent currentAgent = activeAgents.get(i);
 			
@@ -389,7 +389,7 @@ public class LedLightController extends PApplet
 			
 			// OSC message field = agent distance from centroid (float)
 			oscMessage.add(agentDistanceFromCentroid);
-		}
+		}*/
 		
 		if(debugMode) {
 			oscP5.send(oscMessage, eventDestinationForDebugMusicOscPackages);
