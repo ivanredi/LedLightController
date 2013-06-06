@@ -38,17 +38,13 @@ public class LedLightController extends PApplet
 	OscP5 oscP5;	
 	int kinectPort = 7000;
 	int musicPort = 7001;
-    int musicPortForDebug = 7002;
+        int musicPortForDebug = 7002;
     
 	// OSC destination for debugging purposes
 	NetAddress eventDestinationForKinectOscPackages;
 	NetAddress eventDestinationForMusicOscPackages;
-<<<<<<< HEAD
-	int kinectPort = 7000;
-	int musicPort = 7001;
-=======
 	NetAddress eventDestinationForDebugMusicOscPackages;
->>>>>>> 7acae49becea6965d80131431dca6accd6fd0007
+
 	
 	// 2. CONTROLLERS INSTANCES
 	AgentController agentController;
