@@ -163,6 +163,9 @@ public class AgentController implements OscEventListener
 				e1.printStackTrace();
 			}
 			OscMessage[] latestOscMessages = this.latestOscMessages.clone();
+			for (int i = 0; i < MAX_ACTIVE_AGENTS; i++) {
+				this.latestOscMessages[i] = null;
+			}
 			controlOscMessagesAccess.release();
 			for (int i = 0; i < MAX_ACTIVE_AGENTS; i++) {
 				updateAgents(latestOscMessages[i]);
@@ -194,7 +197,6 @@ public class AgentController implements OscEventListener
 		
 		if (oscMessage != null) {
 			messageArguments = oscMessage.arguments();
-			oscMessage = null;
 		}
 		
 		controlOscMessagesAccess.release();
@@ -202,7 +204,23 @@ public class AgentController implements OscEventListener
 		if (messageArguments != null) {
 			
 			// parse osc message
-			int agentId = (Integer) messageArguments[0];
+			int agentId;
+			boolean isActive;
+			float xPosition;
+			float yPosition;
+			float nearestAgentDistance;
+			float angle;
+			try {
+				agentId = (Integer) messageArguments[0];
+				isActive = ((Integer) messageArguments[1]) != 0;
+				xPosition = (Float) messageArguments[2];
+				yPosition = (Float) messageArguments[3];
+				nearestAgentDistance = (Float) messageArguments[4];
+				angle = (Float) messageArguments[5];// ignore
+			} catch (Exception e1) {
+				e1.printStackTrace();
+				return;
+			}
 			
 			try {
 				controlAgentArrayAccess.acquire();
@@ -214,7 +232,6 @@ public class AgentController implements OscEventListener
 			
 			controlAgentArrayAccess.release();
 			
-			boolean isActive = ((Integer) messageArguments[1]) != 0;
 			boolean wasActive = oldAgent.isActive();
 			if (isActive && ! wasActive) {
 				numberOfActiveAgents++;		// became active
@@ -223,8 +240,6 @@ public class AgentController implements OscEventListener
 				numberOfActiveAgents--;		// became inactive
 			}
 			
-			float xPosition = (Float) messageArguments[2];
-			float yPosition = (Float) messageArguments[3];
 
 			// update agent
 			Agent newAgent = new Agent(agentId);
@@ -236,9 +251,8 @@ public class AgentController implements OscEventListener
 				smoothMovement(oldAgent, newAgent);
 			}
 
-			newAgent.setNearestAgentDistance((Float) messageArguments[4]);
+			newAgent.setNearestAgentDistance(nearestAgentDistance);
 
-			float angle = (Float) messageArguments[5];// ignore
 
 			try {
 				controlAgentArrayAccess.acquire();
