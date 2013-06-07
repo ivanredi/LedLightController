@@ -83,7 +83,7 @@ public class LedLightController extends PApplet
 	int draggedAgentIndex = -1;
 	
 	// debug and print mode
-	boolean debugMode = true;
+	boolean debugMode = false;
 	boolean printMode = true;
 	boolean printAgentsPositions = false;
 	boolean fileSaveMode = false;
