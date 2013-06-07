@@ -15,6 +15,8 @@ import oscP5.*;
  */
 public class AgentController implements OscEventListener
 {
+	private static final int MAX_ACTIVE_AGENTS = 5;
+
 	// Time interval between two consecutive agent position updates, in milliseconds.
 	private static final int AGENT_UPDATER_THREAD_CYCLE_LENGTH = 66;
 	
@@ -41,7 +43,15 @@ public class AgentController implements OscEventListener
 	// OSC network variable for led-light event listener
 	private OscP5 oscP5;
 	
-	private OscMessage latestOscMessage = null;
+	private OscMessage[] latestOscMessages = new OscMessage[MAX_ACTIVE_AGENTS];
+	// Initialize messages to null.
+	{
+		for (int i = 0; i < latestOscMessages.length; i++) {
+			latestOscMessages[i] = null;
+		}
+	}
+	
+	private int nextOscMessageIndex = 0;
 
 	public Semaphore controlOscMessagesAccess = new Semaphore(1, true);
 	
@@ -82,7 +92,7 @@ public class AgentController implements OscEventListener
 	private void initializeAgents()
 	{
 		agents = new ArrayList<Agent>();
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < MAX_ACTIVE_AGENTS; i++) {
 			agents.add(new Agent(i));
 		}
 		numberOfActiveAgents = 0;
@@ -146,7 +156,17 @@ public class AgentController implements OscEventListener
 	{
 		long nextCycleStartTime = System.currentTimeMillis();
 		while (true) {
-			updateAgents();
+			try {
+				controlOscMessagesAccess.acquire();
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			OscMessage[] latestOscMessages = this.latestOscMessages.clone();
+			controlOscMessagesAccess.release();
+			for (int i = 0; i < MAX_ACTIVE_AGENTS; i++) {
+				updateAgents(latestOscMessages[i]);
+			}
 			long currentTime = System.currentTimeMillis();
 			
 			// Determine next cycle start time
@@ -166,25 +186,23 @@ public class AgentController implements OscEventListener
 	
 	/**
 	 * Update agents based on the latest Osc message recieved.
+	 * @param oscMessage 
 	 */
-	private void updateAgents()
+	private void updateAgents(OscMessage oscMessage)
 	{
 		Object[] messageArguments = null;
-		try {
-			controlOscMessagesAccess.acquire();
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
+		
+		if (oscMessage != null) {
+			messageArguments = oscMessage.arguments();
+			oscMessage = null;
 		}
 		
-		if (latestOscMessage != null) {
-			messageArguments = latestOscMessage.arguments();
-			latestOscMessage = null;
-		}
 		controlOscMessagesAccess.release();
 		
 		if (messageArguments != null) {
 			
-			numberOfActiveAgents = 0;
+			// parse osc message
+			int agentId = (Integer) messageArguments[0];
 			
 			try {
 				controlAgentArrayAccess.acquire();
@@ -192,33 +210,43 @@ public class AgentController implements OscEventListener
 				e.printStackTrace();
 			}
 			
-			for (int i = 0; i < 5; i++) {
-				
-				// parse osc message
-				int agentId = (Integer) messageArguments[i * 6 + 0];
-				boolean isActive = ((Integer) messageArguments[i * 6 + 1]) != 0;
-				if (isActive) {
-					numberOfActiveAgents++;
-				}
-				float xPosition = (Float) messageArguments[i * 6 + 2];
-				float yPosition = (Float) messageArguments[i * 6 + 3];
-
-				// update agent
-				Agent newAgent = new Agent(agentId);
-				newAgent.setActive(isActive);
-
-				// map agent coordinate for each agent
-				setMappedAgentCoord(newAgent, xPosition, yPosition);
-				if (agents.get(i).isActive()) {
-					smoothMovement(agents.get(i), newAgent);
-				}
-
-				newAgent.setNearestAgentDistance((Float) messageArguments[i * 6 + 4]);
-
-				float angle = (Float) messageArguments[i * 6 + 5];// ignore
-
-				agents.set(i, newAgent);
+			Agent oldAgent = agents.get(agentId);
+			
+			controlAgentArrayAccess.release();
+			
+			boolean isActive = ((Integer) messageArguments[1]) != 0;
+			boolean wasActive = oldAgent.isActive();
+			if (isActive && ! wasActive) {
+				numberOfActiveAgents++;		// became active
 			}
+			if (wasActive && ! isActive) {
+				numberOfActiveAgents--;		// became inactive
+			}
+			
+			float xPosition = (Float) messageArguments[2];
+			float yPosition = (Float) messageArguments[3];
+
+			// update agent
+			Agent newAgent = new Agent(agentId);
+			newAgent.setActive(isActive);
+
+			// map agent coordinate for each agent
+			setMappedAgentCoord(newAgent, xPosition, yPosition);
+			if (wasActive) {
+				smoothMovement(oldAgent, newAgent);
+			}
+
+			newAgent.setNearestAgentDistance((Float) messageArguments[4]);
+
+			float angle = (Float) messageArguments[5];// ignore
+
+			try {
+				controlAgentArrayAccess.acquire();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			agents.set(agentId, newAgent);
 			
 			controlAgentArrayAccess.release();
 		}
@@ -232,7 +260,11 @@ public class AgentController implements OscEventListener
 			e1.printStackTrace();
 		}
 		
-		latestOscMessage = theOscMessage;
+		latestOscMessages[nextOscMessageIndex] = theOscMessage;
+		nextOscMessageIndex++;
+		if (nextOscMessageIndex == MAX_ACTIVE_AGENTS) {
+			nextOscMessageIndex -= MAX_ACTIVE_AGENTS;
+		}
 		
 		controlOscMessagesAccess.release();
 		

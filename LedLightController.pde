@@ -38,13 +38,12 @@ public class LedLightController extends PApplet
 	OscP5 oscP5;	
 	int kinectPort = 7000;
 	int musicPort = 7001;
-        int musicPortForDebug = 7002;
+    int musicPortForDebug = 7002;
     
 	// OSC destination for debugging purposes
 	NetAddress eventDestinationForKinectOscPackages;
 	NetAddress eventDestinationForMusicOscPackages;
 	NetAddress eventDestinationForDebugMusicOscPackages;
-
 	
 	// 2. CONTROLLERS INSTANCES
 	AgentController agentController;
@@ -67,7 +66,8 @@ public class LedLightController extends PApplet
 			                     1.0f, // 2 active agents
 			                     20.0f, // 3 active agents
 			                     400.0f, // 4 active agents
-			                     8000.0f }; // 5 active agents
+			                     8000.0f // 5 active agents 
+			                    }; 
 	
 	// color values for each mode
 	int[][] adjustColor = { {255, 255, 255}, //mode 1
@@ -85,7 +85,7 @@ public class LedLightController extends PApplet
 	// debug and print mode
 	boolean debugMode = true;
 	boolean printMode = true;
-	boolean printAgentsPositions = true;
+	boolean printAgentsPositions = false;
 	boolean fileSaveMode = false;
 	boolean runLedSimulator = false;
 	
@@ -317,9 +317,11 @@ public class LedLightController extends PApplet
 	{
 		// create OSC messages for kinect simulation (for debug purposes )
 		if (debugMode) {
-			OscMessage oscMessage = new OscMessage("/agentsStatusForLedLight");
-			for (int i = 0; i < agentsInKinectSpace.size(); i++) {
 
+			for (int i = 0; i < agentsInKinectSpace.size(); i++) {
+				
+				OscMessage oscMessage = new OscMessage("/kinectMessageSimulator");
+				
 				Agent currentAgent = agentsInKinectSpace.get(i);
 
 				// OSC message field = agent id (int)
@@ -337,10 +339,13 @@ public class LedLightController extends PApplet
 				// OSC message field = agent distance from nearest agent (float)
 				oscMessage.add(currentAgent.getNearestAgentDistance());
 
-				// OSC message field = agent x position (float)
+				// OSC message field = angle between 0.0 and agent position (float)
 				oscMessage.add(currentAgent.getAngle());
+				
+				// send OSC message for each agent
+				oscP5.send(oscMessage, eventDestinationForKinectOscPackages);
 			}
-			oscP5.send(oscMessage, eventDestinationForKinectOscPackages);
+			
 		}
 		
 		// create OSC message for music controller (for debug and real data)
