@@ -69,6 +69,7 @@ public class LedLightController extends PApplet
 	// OSC NETWORK INSTANCES
 	OscP5 oscP5;	
 	int kinectPort = 7000;
+	int debugKinectPort = 6999;
 	int musicPort = 7001;
     int musicPortForDebug = 7002;
     
@@ -105,7 +106,7 @@ public class LedLightController extends PApplet
 				agentsInKinectSpace.add(new Agent(i));
 			}
 			
-			eventDestinationForKinectOscPackages = new NetAddress("127.0.0.1", kinectPort);
+			eventDestinationForKinectOscPackages = new NetAddress("127.0.0.1", debugKinectPort);
 			eventDestinationForDebugMusicOscPackages = new NetAddress("127.0.0.1", musicPortForDebug);
 			
 			musicController = new MusicController(musicPortForDebug);
@@ -123,7 +124,11 @@ public class LedLightController extends PApplet
 		pGraphicsBuffer = createGraphics(maxProcessingSpaceWidth, maxProcessingSpaceHeight);
 
 		// agent_controller initialization; set radius
-		agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filePath);
+		if (! debugMode) {
+			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filePath);
+		} else {
+			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, debugKinectPort, filePath);
+		}
 		agentController.setBufferCoordinates(minProcessingSpaceWidth, maxProcessingSpaceWidth, minProcessingSpaceHeight, maxProcessingSpaceHeight);
 		agentController.setKinectCoordinates(minKinectWidth, maxKinectWidth, minKinectHeight, maxKinectHeight);
 		
