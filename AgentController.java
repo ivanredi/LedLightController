@@ -44,6 +44,8 @@ public class AgentController implements OscEventListener
 	// OSC network variable for led-light event listener
 	private OscP5 oscP5;
 	
+	private FileWriter fileWriter;
+
 	private OscMessage[] latestOscMessages = new OscMessage[MAX_ACTIVE_AGENTS];
 	// Initialize messages to null.
 	{
@@ -71,12 +73,19 @@ public class AgentController implements OscEventListener
 	});
 	
 	// constructor
-	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort)
+	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filePath)
 	{
 		super();
 		this.radius = radius;
 		this.saveMode = saveMode;
 		this.maxAgentStepSize = maxAgentStepSize;
+
+		try {
+			fileWriter = new FileWriter(filePath, true);
+		} catch (IOException e) {
+			
+		}
+		
 		// initialize 5 agents
 		initializeAgents();
 		
@@ -301,23 +310,11 @@ public class AgentController implements OscEventListener
 	public void oscStatus(OscStatus theStatus)
 	{
 	}
-	
-	static FileWriter fileWriter;
-	
-	static {
-		
-		try {
-			fileWriter = new FileWriter("oscpackage.txt", true);
-		} catch (IOException e) {
-			
-		}
-	}
 
-	public static void appendFile(String text) throws IOException
+	public void appendFile(String text) throws IOException
 	{
 		fileWriter.write(text);
 		fileWriter.flush();
 	}
-
+		
 }
-

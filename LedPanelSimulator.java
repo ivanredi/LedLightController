@@ -33,6 +33,11 @@ public class LedPanelSimulator implements DmxUniversesConnector
 	 * Maps each pixel of each universe to its physical coordinates.
 	 */
 	private int[][][] universesMapping;
+	
+	private float ledSpacingX;
+	private float ledSpacingY;
+	private float ledDiameterX;
+	private float ledDiameterY;
 
 	public LedPanelSimulator(PApplet pApplet, int[][][] universesMapping)
 	{
@@ -43,7 +48,7 @@ public class LedPanelSimulator implements DmxUniversesConnector
 		y = 0;
 	}
 
-	public LedPanelSimulator(PApplet pApplet, int width, int height, int x, int y, int stripLength, int corner)
+	public LedPanelSimulator(PApplet pApplet, int width, int height, int x, int y, int stripLength, int corner, int realWidth, int realHeight)
 	{
 		super();
 		this.pApplet = pApplet;
@@ -82,6 +87,10 @@ public class LedPanelSimulator implements DmxUniversesConnector
 				i += xIncrement;
 			}
 		}
+		this.ledSpacingX = ((float) realWidth) / ((float) width);
+		this.ledSpacingY = ((float) realHeight) / ((float) height);
+		this.ledDiameterX = ledSpacingX / 3.66f;
+		this.ledDiameterY = ledSpacingY / 3.66f;
 	}
 	
 	@Override
@@ -91,13 +100,15 @@ public class LedPanelSimulator implements DmxUniversesConnector
 		for (int i = 0; i < pixelColors.length && i < universesMapping[universeIndex].length; i++) {
 			int x = universesMapping[universeIndex][i][0];
 			int y = universesMapping[universeIndex][i][1];
+			float ledX = (this.x + x + 0.5f) * ledSpacingX;
+			float ledY = (this.y + y + 0.5f) * ledSpacingY;
 			pApplet.noStroke();
 			pApplet.fill(0);
-			pApplet.ellipse((this.x + x) * 22 + 11, (this.y + y) * 22 + 11, 13, 13);
+			pApplet.ellipse(ledX, ledY, ledDiameterX * 2 + 1, ledDiameterY * 2 + 1);
 			pApplet.fill(pixelColors[i], 100f);
-			pApplet.ellipse((this.x + x) * 22 + 11, (this.y + y) * 22 + 11, 12, 12);
+			pApplet.ellipse(ledX, ledY, ledDiameterX * 2, ledDiameterY * 2);
 			pApplet.fill(pixelColors[i]);
-			pApplet.ellipse((this.x + x) * 22 + 11, (this.y + y) * 22 + 11, 6, 6);
+			pApplet.ellipse(ledX, ledY, ledDiameterX, ledDiameterY);
 		}
 	}
 

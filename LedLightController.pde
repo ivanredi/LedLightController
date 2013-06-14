@@ -16,6 +16,34 @@ import netP5.*;
 public class LedLightController extends PApplet
 {
 
+	// debug and print mode
+	boolean debugMode = true;
+	boolean printMode = true;
+	boolean runLedSimulator = true;
+	boolean printAgentsPositions = false;
+
+	// agents space size
+	float[] adjustBrightness = { 0.005f, // 1 active agent
+			                     1.0f, // 2 active agents
+			                     20.0f, // 3 active agents
+			                     400.0f, // 4 active agents
+			                     8000.0f // 5 active agents 
+			                    }; 
+	
+	// color values for each mode
+	int[][] adjustColor = { {255, 255, 255}, //mode 1
+			                {255, 0, 0}, //mode 2
+			                {0, 255, 0}, //mode 3
+			                {0, 255, 255} //mode 4
+			              }; 
+	
+	// maximum range for the agent to stay in the group
+	float maxDistanceFromCentroid = 5.0f;
+	
+	// save OSC packages to the file
+	boolean fileSaveMode = false;
+	String filePath = "oscpackages.txt";
+	
 	// KINECT SPACE COORDINATES
 	int minKinectWidth = -100;
 	int maxKinectWidth = 100;
@@ -33,8 +61,12 @@ public class LedLightController extends PApplet
 	int maxMusicSpaceWidth = 127;
 	int minMusicSpaceHeight = 0;
 	int maxMusicSpaceHeight = 127;
+	
+	// LED SCREEN DIMENSIONS
+	int ledScreenWidth = 1232;
+	int ledScreenHeight = 880;
 
-	// 1. OSC NETWORK INSTANCES
+	// OSC NETWORK INSTANCES
 	OscP5 oscP5;	
 	int kinectPort = 7000;
 	int musicPort = 7001;
@@ -44,57 +76,20 @@ public class LedLightController extends PApplet
 	NetAddress eventDestinationForKinectOscPackages;
 	NetAddress eventDestinationForMusicOscPackages;
 	NetAddress eventDestinationForDebugMusicOscPackages;
-	
-	// 2. CONTROLLERS INSTANCES
+
+	// CONTROLLERS INSTANCES
 	AgentController agentController;
 	AgentGroupController agentGroupController;
-	
-	// 2.1. CONTROLLERS VARIABLES
-	// diameter of the surface that agent takes in space
-	int agentRadius = 0;
-	// maximum range for the agent to stay in the group
-	float maxDistanceFromCentroid = 10.0f;
-	// mode for agents group position
-	int systemMode = 0;
-
-	// 3. DRAWING:
-	// drawing buffer
-	PGraphics pGraphicsBuffer;
-	
-	// largeness values for agents
-	float[] adjustBrightness = { 0.005f, // 1 active agent
-			                     1.0f, // 2 active agents
-			                     20.0f, // 3 active agents
-			                     400.0f, // 4 active agents
-			                     8000.0f // 5 active agents 
-			                    }; 
-	
-	// color values for each mode
-	int[][] adjustColor = { {255, 255, 255}, //mode 1
-			                {255, 0, 0}, //mode 2
-			                {0, 255, 0}, //mode 3
-			                {0, 255, 255} //mode 4
-			              }; 
-	
-	
-	// 4. KINECT SIMULATOR VARIABLES
-	ArrayList<Agent> agentsInKinectSpace;
-	int numberOfActiveAgentsInKinectSpace;
-	int draggedAgentIndex = -1;
-	
-	// debug and print mode
-	boolean debugMode = false;
-	boolean printMode = true;
-	boolean printAgentsPositions = false;
-	boolean fileSaveMode = false;
-	boolean runLedSimulator = false;
-	
-	//array for debug-print mode
-	ArrayList<Agent> previousAgentsState  = new ArrayList<Agent>();
-	
-	// music controller variables
-	MusicController musicController;
-	float maxAgentStepSize = 6;
+	int agentRadius = 0; // diameter of the surface that agent takes in space (not in use)
+	int systemMode = 0; // mode for agents group position
+	MusicController musicController; // music controller variables
+	float maxAgentStepSize = 6; // smooth variable for agents motion (agent jumps)
+	PGraphics pGraphicsBuffer; // drawing buffer
+	ArrayList<Agent> agentsInKinectSpace; // array for kinect simulator and debug purposes 
+	ArrayList<Agent> previousAgentsState  = new ArrayList<Agent>(); //array for debug-print mode
+	int numberOfActiveAgentsInKinectSpace; // variable for kinect simulator and debug purposes 
+	int draggedAgentIndex = -1;  // variable for kinect simulator and debug purposes 
+	//PApplet pApplet;
 	
 	// processing method setup()
 	public void setup()
@@ -128,7 +123,7 @@ public class LedLightController extends PApplet
 		pGraphicsBuffer = createGraphics(maxProcessingSpaceWidth, maxProcessingSpaceHeight);
 
 		// agent_controller initialization; set radius
-		agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort);
+		agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filePath);
 		agentController.setBufferCoordinates(minProcessingSpaceWidth, maxProcessingSpaceWidth, minProcessingSpaceHeight, maxProcessingSpaceHeight);
 		agentController.setKinectCoordinates(minKinectWidth, maxKinectWidth, minKinectHeight, maxKinectHeight);
 		
@@ -143,6 +138,8 @@ public class LedLightController extends PApplet
 		if (runLedSimulator) {
 			//crate screen for LED simulator 
 			LedScreen.buffer = this.pGraphicsBuffer;
+			LedScreen.setWidth = ledScreenWidth;
+			LedScreen.setHeight = ledScreenHeight;
 			PApplet.main(new String[] { LedScreen.class.getName() });
 		}
 		
@@ -529,5 +526,44 @@ public class LedLightController extends PApplet
 		}
 		
 	}
+	
+	
+	
+	public LedLightController()
+	{
+		super();
+	}
+
+	// constructor for LedLightController class
+	public LedLightController(int minKinectWidth, int maxKinectWidth, int minKinectHeight, int maxKinectHeight, 
+			  int kinectPort, int musicPort, int musicPortForDebug,
+			  float maxDistanceFromCentroid, 
+			  float[] adjustBrightness,
+			  int[][] adjustColor, 
+			  boolean debugMode, 
+			  boolean printMode,
+			  boolean printAgentsPositions, 
+			  boolean runLedSimulator, 
+			  float maxAgentStepSize, 
+			  PApplet pApplet)
+							{
+								super();
+								this.minKinectWidth = minKinectWidth;
+								this.maxKinectWidth = maxKinectWidth;
+								this.minKinectHeight = minKinectHeight;
+								this.maxKinectHeight = maxKinectHeight;
+								this.kinectPort = kinectPort;
+								this.musicPort = musicPort;
+								this.musicPortForDebug = musicPortForDebug;
+								this.maxDistanceFromCentroid = maxDistanceFromCentroid;
+								this.adjustBrightness = adjustBrightness;
+								this.adjustColor = adjustColor;
+								this.debugMode = debugMode;
+								this.printMode = printMode;
+								this.printAgentsPositions = printAgentsPositions;
+								this.runLedSimulator = runLedSimulator;
+								this.maxAgentStepSize = maxAgentStepSize;
+								//this.pApplet = pApplet;
+							}
 	
 }
