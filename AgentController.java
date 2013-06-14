@@ -1,5 +1,6 @@
 
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -287,10 +288,9 @@ public class AgentController implements OscEventListener
 			Object[] messageArguments = theOscMessage.arguments();
 			try {
 				for (int i = 0; i < messageArguments.length; i++) {
-					TextFileManipulation.appendFile("oscpackage.txt",
-							messageArguments[i].toString() + "\t");
+					appendFile(messageArguments[i].toString() + "\t");
 				}
-				TextFileManipulation.appendFile("oscpackage.txt", "\r\n");
+				appendFile("\r\n");
 			} catch (IOException e) {
 				e.printStackTrace();
 
@@ -301,96 +301,22 @@ public class AgentController implements OscEventListener
 	public void oscStatus(OscStatus theStatus)
 	{
 	}
+	
+	static FileWriter fileWriter;
+	
+	static {
+		
+		try {
+			fileWriter = new FileWriter("oscpackage.txt", true);
+		} catch (IOException e) {
+			
+		}
+	}
 
-	/*
-	 * //debug mode
-	 * 
-	 * public class AgentDirection { public int xDirection; public int
-	 * yDirection;
-	 * 
-	 * public AgentDirection(int xDirection, int yDirection) { super();
-	 * this.xDirection = xDirection; this.yDirection = yDirection; }
-	 * 
-	 * }
-	 * 
-	 * public ArrayList<AgentDirection> directions = new ArrayList<>();
-	 * 
-	 * private void registerAgentsAndSetDirections() {
-	 * 
-	 * // set directions directions.add(0, new AgentDirection(1, 1));
-	 * directions.add(1, new AgentDirection(-1, -1)); directions.add(0, new
-	 * AgentDirection(1, -1)); directions.add(1, new AgentDirection(-1, 1));
-	 * directions.add(1, new AgentDirection(1, 1));
-	 * 
-	 * // set random start position for 2 agents for (int i = 0; i < 5; i++) {
-	 * 
-	 * Random randomNum = new Random(); float randomX =
-	 * randomNum.nextInt(maxKinectWidth * 2) - maxKinectWidth; float randomY =
-	 * randomNum.nextInt(maxKinectHeight * 2) - maxKinectHeight;
-	 * 
-	 * System.out.println("AGENT KINECT POSITION = ( " + randomX + ", " +
-	 * randomY + ")");
-	 * 
-	 * // map agent coordinate for each agent setMappedAgentCoord(agents.get(i),
-	 * randomX, randomY); // set isActive agents.get(i).setActive(true); //
-	 * increase number of active agents numberOfActiveAgents++;
-	 * 
-	 * System.out.println("ACTIVE AGENT: ID = " + i + ". SPACE POSITION = (" +
-	 * agents.get(i).getX() + ", " + agents.get(i).getY() + ")"); }
-	 * 
-	 * }
-	 * 
-	 * 
-	 * // method called from LedLightController to provide agent motion public
-	 * void moveAgents(ArrayList<Agent> agents) { int numberOfAgents =
-	 * agents.size(); // move agents for (int i = 0; i < numberOfAgents; i++) {
-	 * agentMotion(agents.get(i), 1.5f, 1.5f, directions.get(i)); } }
-	 * 
-	 * // when agent hits the edge of the window, it reverses its direction
-	 * private void agentMotion(Agent agent, float xSpeed, float ySpeed,
-	 * AgentDirection direction) {
-	 * 
-	 * float xPosition = agent.getX(); xPosition = xPosition + (xSpeed *
-	 * direction.xDirection);
-	 * 
-	 * float yPosition = agent.getY(); yPosition = yPosition + (ySpeed *
-	 * direction.yDirection);
-	 * 
-	 * // Test to see if the shape exceeds the boundaries of the screen // If it
-	 * does, reverse its direction by multiplying by -1 if (xPosition >
-	 * maxSpaceWidth - radius || xPosition < radius) { direction.xDirection *=
-	 * -1; }
-	 * 
-	 * if (yPosition > maxSpaceHeight - radius || yPosition < radius) {
-	 * direction.yDirection *= -1; }
-	 * 
-	 * // set new agent position agent.setAgentPosition(xPosition, yPosition); }
-	 * 
-	 * private void setNumberOfNearbyAgents() {
-	 * 
-	 * int numberOfAgents = agents.size();
-	 * 
-	 * for (int i = 0; i < numberOfAgents - 1; i++) { for (int j = i + 1; j <
-	 * numberOfAgents; j++) {
-	 * 
-	 * Agent agentOne = agents.get(i); Agent agentTwo = agents.get(j);
-	 * 
-	 * float agentsDistance = PApplet.dist(agentOne.getX(), agentOne.getY(),
-	 * agentTwo.getX(), agentTwo.getY());
-	 * 
-	 * if (agentsDistance <= radius) {
-	 * 
-	 * agentOne.setNearbyObjectCount(agentOne.getNearbyObjectCount() + 1); if
-	 * (agentsDistance < agentOne.getNearestAgentDistance()) {
-	 * agentOne.setNearestAgentDistance(agentsDistance); }
-	 * 
-	 * agentTwo.setNearbyObjectCount(agentTwo.getNearbyObjectCount() + 1); if
-	 * (agentsDistance < agentTwo.getNearestAgentDistance()) {
-	 * agentTwo.setNearestAgentDistance(agentsDistance); }
-	 * 
-	 * }
-	 * 
-	 * } } }
-	 */
-
+	public static void appendFile(String text) throws IOException
+	{
+		fileWriter.write(text);
+		fileWriter.flush();
+	}
+		
 }
