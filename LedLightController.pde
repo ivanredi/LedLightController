@@ -1,8 +1,7 @@
 
 
-import java.awt.Point;
+import java.io.File;
 import java.util.ArrayList;
-
 import processing.core.*;
 import oscP5.*;
 import netP5.*;
@@ -16,8 +15,10 @@ import netP5.*;
 public class LedLightController extends PApplet
 {
 
-	// debug and print mode
-	boolean debugMode = true;
+	private static final long serialVersionUID = -8381361181536369840L;
+	
+	// debug and print modes
+	boolean debugMode = false;
 	boolean printMode = true;
 	boolean runLedSimulator = true;
 	boolean printAgentsPositions = false;
@@ -37,11 +38,9 @@ public class LedLightController extends PApplet
 			                {0, 255, 255} //mode 4
 			              }; 
 	
-	// maximum range for the agent to stay in the group
-	float maxDistanceFromCentroid = 5.0f;
+	float maxDistanceFromCentroid = 5.0f; 	// maximum range for the agent to stay in the group
 	
-	// save OSC packages to the file
-	boolean fileSaveMode = false;
+	boolean fileSaveMode = false; // save OSC packages to the file
 	String filePath = "oscpackages.txt";
 	
 	// KINECT SPACE COORDINATES
@@ -90,16 +89,13 @@ public class LedLightController extends PApplet
 	ArrayList<Agent> previousAgentsState  = new ArrayList<Agent>(); //array for debug-print mode
 	int numberOfActiveAgentsInKinectSpace; // variable for kinect simulator and debug purposes 
 	int draggedAgentIndex = -1;  // variable for kinect simulator and debug purposes 
-	//PApplet pApplet;
 	
 	// processing method setup()
 	public void setup()
 	{
-		// osc-network initialization
-		oscP5 = new OscP5(this, 0);
+		oscP5 = new OscP5(this, 0); // osc-network initialization
 		
-		// create music listener for debug mode
-		if (debugMode) {
+		if (debugMode) { // create osc-event destinations for kinect-motion and music listener for debug mode
 			
 			agentsInKinectSpace = new ArrayList<Agent>();
 			for (int i = 0; i < 5; i++) {
@@ -112,35 +108,31 @@ public class LedLightController extends PApplet
 			musicController = new MusicController(musicPortForDebug);
 		}
 		
-		eventDestinationForMusicOscPackages = new NetAddress("127.0.0.1", musicPort);
+		eventDestinationForMusicOscPackages = new NetAddress("127.0.0.1", musicPort); // create osc-event destination for music
 		
-		// processing frame initializations
-		// set frame title
-		frame.setTitle("Led Screen Controller");
-		// set window size
-		size(560, 400);
+		frame.setTitle("Led Screen Controller"); // processing frame initialization (frame title)
+		size(560, 400);	// (frame size)
 		
-		// create buffer for drawing
-		pGraphicsBuffer = createGraphics(maxProcessingSpaceWidth, maxProcessingSpaceHeight);
+		pGraphicsBuffer = createGraphics(maxProcessingSpaceWidth, maxProcessingSpaceHeight);// create processing buffer for drawing
 
-		// agent_controller initialization; set radius
-		if (! debugMode) {
+		// agent_controller initialization
+		if (! debugMode) { // listening port based on debug mode
 			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filePath);
 		} else {
 			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, debugKinectPort, filePath);
 		}
+		// forward coordinates to the agent controller
 		agentController.setBufferCoordinates(minProcessingSpaceWidth, maxProcessingSpaceWidth, minProcessingSpaceHeight, maxProcessingSpaceHeight);
 		agentController.setKinectCoordinates(minKinectWidth, maxKinectWidth, minKinectHeight, maxKinectHeight);
 		
-		if(printAgentsPositions) {
+		if(printAgentsPositions) {// for printing the agents position in processing buffer space
 			previousAgentsState.addAll(agentController.agents);
 		}
 		
 		// initialize agent_group_controller with agents in system; set max distance from centroid
 		agentGroupController = new AgentGroupController(agentController.agents, maxDistanceFromCentroid);
 		
-		// debug mode
-		if (runLedSimulator) {
+		if (runLedSimulator) { // led simulator is turned on
 			//crate screen for LED simulator 
 			LedScreen.buffer = this.pGraphicsBuffer;
 			LedScreen.setWidth = ledScreenWidth;
@@ -154,32 +146,26 @@ public class LedLightController extends PApplet
 	public void draw() 
 	{
 		background(0);
-		
-		sendAgentsStatusToControllers();
+		sendAgentsStatusToControllers(); // refresh osc-messages
 
-		// check current active agents in system
-		try {
+		try { // check current active agents in system (provide save access to the agents array with semaphore)
 			agentController.controlAgentArrayAccess.acquire();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		agentGroupController.getActiveAgentsInSystem(agentController.agents);
-		agentController.controlAgentArrayAccess.release();
+		agentController.controlAgentArrayAccess.release(); // release semaphore
 		
-		// get returned mode from agent_group_controller
-		int mode = agentGroupController.getModeControl();
+		int mode = agentGroupController.getModeControl(); // returns mode from the AgentGroupController
 
-		// print mode
-		if (printMode) {
+		if (printMode) { // console print mode
 			
-			// mode
-			if (this.systemMode != mode) {
+			if (this.systemMode != mode) { // print system mode
 				System.out.println("\nMode " + mode);
 				this.systemMode = mode;
 			}
 			
-			if (printAgentsPositions) {
-				// print agent's positions			
+			if (printAgentsPositions) { // prints the agents position in processing buffer space
 				for (int i = 0; i < 5; i ++) {
 					Agent agent = agentController.agents.get(i);
 					Agent previousAgentState = previousAgentsState.get(i);
@@ -195,51 +181,40 @@ public class LedLightController extends PApplet
 			}
 		}
 		
-		// debug mode
-		if (runLedSimulator) {
-			// provide thread safe rendering on LED simulator with semaphore
-			try {
+		if (runLedSimulator) { // led simulator is turned on
+			try { // provide thread safe rendering on LED simulator with semaphore
 				LedScreen.allowBufferRenderer.acquire();
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
 		}
 		
-		// prepare and fill buffer
-		pGraphicsBuffer.beginDraw();
+		pGraphicsBuffer.beginDraw(); // prepare and fill buffer
 		pGraphicsBuffer.background(0);
 
-		// draw in buffer
-		drawWithPixel(pGraphicsBuffer, mode);
+		drawWithPixel(pGraphicsBuffer, mode); // draw in buffer
+		
+		pGraphicsBuffer.endDraw(); // close buffer
 
-		/* try {
-		// move agents with pause
-			Thread.sleep(40);
-			agentControler.moveAgents(agentControler.agents);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} */
-
-		// close buffer
-		pGraphicsBuffer.endDraw();
-
-		// debug mode
-		if (runLedSimulator) {
-			// provide thread safe rendering with semaphore
-			LedScreen.allowBufferRenderer.release();
+		if (runLedSimulator) { // led simulator is turned on
+			LedScreen.allowBufferRenderer.release(); // release semaphore for led simulator
 		}
 		
-		// display image from buffer in main screen
-		PImage pImage = pGraphicsBuffer.get();
+		PImage pImage = pGraphicsBuffer.get(); // display image from buffer in main screen
 		image(pImage, 0, 0, width, height);
 		
-		// delete memory cache
-		pGraphicsBuffer.removeCache(pImage);
+		pGraphicsBuffer.removeCache(pImage); // delete memory cache
 		g.removeCache(pImage);
 		
 	}
 
-	// drawing method
+	/**
+	 * Implementation of the drawing algorithm. Method is checking each pixel in the buffer network of pixels
+	 * and calculate his brightness value based on the number of the agents in the system and
+	 * their positions. Color of the pixel is calculating based on the system mode.
+	 * @param buffer
+	 * @param mode
+	 */
 	void drawWithPixel(PGraphics buffer, int mode)
 	{
 		float[][] pixi = new float[buffer.width][buffer.height];
@@ -247,7 +222,7 @@ public class LedLightController extends PApplet
 		int numberOfActiveAgents = agentGroupController.activeAgentsInSystem.size();
 		if (numberOfActiveAgents > 0) {
 			
-			// loop matrix of pixels
+			// loop matrix of pixels to set pixels value for darkness
 			for (int i = 0; i < buffer.width; i++) {
 				for (int j = 0; j < buffer.height; j++) {
 
@@ -258,31 +233,26 @@ public class LedLightController extends PApplet
 					// if group is created calculate darkness value of each pixel for agents in group
 					if (numberOfAgentsInGroup > 0) {
 						
-						// loop agents in group
-						for(int a = 0; a < numberOfAgentsInGroup; a++) {
+						for(int a = 0; a < numberOfAgentsInGroup; a++) { // loop agents in group
 							
 							Agent agent = agentGroupController.agentsInGroup.get(a);						
 							float pixelDistFromAgent = dist(i, j, agent.getX(), agent.getY());
 							darkness *= pixelDistFromAgent;
 							
 						}
-							
-						// add pixel size around agents in group
-						float brightnes = adjustBrightness[numberOfAgentsInGroup - 1];
+						float brightnes = adjustBrightness[numberOfAgentsInGroup - 1]; // add pixel size around agents in group
 						darkness /= brightnes;
 						if (darkness < minDarkness) {
 							minDarkness = darkness;
 						}
 					}
-					
 					darkness = 1;
-					// loop all active agents in system
-					for (int a = 0; a < numberOfActiveAgents; a++) {
+					
+					for (int a = 0; a < numberOfActiveAgents; a++) { // loop all active agents in system
 						
 						Agent agent = agentGroupController.activeAgentsInSystem.get(a);						
 						float pixelDistFromAgent = dist(i, j, agent.getX(), agent.getY());
 						darkness *= pixelDistFromAgent;
-					
 					}
 										
 					float brightnes = adjustBrightness[numberOfActiveAgents - 1];
@@ -292,24 +262,20 @@ public class LedLightController extends PApplet
 					if (darkness < minDarkness) {
 						minDarkness = darkness;
 					}
-					
-				    // set pixel value for darkness
-					pixi[i][j] = (float) (255 - minDarkness);
-
+				    
+					pixi[i][j] = (float) (255 - minDarkness); // set pixel value for darkness
 				}
 			}
 		}
-
-		// draw each pixel with his corresponding color
-		for (int i = 0; i < buffer.width; i++) {
+		
+		//  loop matrix of pixels to coloring pixels
+		for (int i = 0; i < buffer.width; i++) { 
 			for (int j = 0; j < buffer.height; j++) {
 
 				float pixel = pixi[i][j] / 255.0f;
 				// set pixel color based on mode
 				buffer.stroke(adjustColor[mode - 1][0] * pixel, adjustColor[mode - 1][1] * pixel, adjustColor[mode - 1][2] * pixel, 255);
-				// draw point with  
-				buffer.point(i, j);
-
+				buffer.point(i, j);// draw pixel point
 			}
 		}
 		
@@ -317,93 +283,46 @@ public class LedLightController extends PApplet
 	
 	void sendAgentsStatusToControllers()
 	{
-		// create OSC messages for kinect simulation (for debug purposes )
-		if (debugMode) {
+		
+		if (debugMode) { // create OSC messages for kinect simulation (for debug purposes )
 
 			for (int i = 0; i < agentsInKinectSpace.size(); i++) {
 				
-				OscMessage oscMessage = new OscMessage("/kinectMessageSimulator");
-				
 				Agent currentAgent = agentsInKinectSpace.get(i);
-
-				// OSC message field = agent id (int)
-				oscMessage.add(currentAgent.getAgentId());
-
-				// OSC message field = agent is active (int)
-				oscMessage.add(currentAgent.isActive() ? 1 : 0);
-
-				// OSC message field = agent x position (float)
-				oscMessage.add(currentAgent.getX());
-
-				// OSC message field = agent y position (float)
-				oscMessage.add(currentAgent.getY());
-
-				// OSC message field = agent distance from nearest agent (float)
-				oscMessage.add(currentAgent.getNearestAgentDistance());
-
-				// OSC message field = angle between 0.0 and agent position (float)
-				oscMessage.add(currentAgent.getAngle());
 				
-				// send OSC message for each agent
-				oscP5.send(oscMessage, eventDestinationForKinectOscPackages);
+				OscMessage oscMessage = new OscMessage("/kinectMessageSimulator");
+				oscMessage.add(currentAgent.getAgentId());// OSC message field = agent id (int)
+				oscMessage.add(currentAgent.isActive() ? 1 : 0); // OSC message field = agent is active (int)
+				oscMessage.add(currentAgent.getX()); // OSC message field = agent x position (float)
+				oscMessage.add(currentAgent.getY()); // OSC message field = agent y position (float)
+				oscMessage.add(currentAgent.getNearestAgentDistance()); // OSC message field = agent distance from nearest agent (float)
+				oscMessage.add(currentAgent.getAngle()); // OSC message field = angle between 0.0 and agent position (float)
+				
+				oscP5.send(oscMessage, eventDestinationForKinectOscPackages); // send OSC message for each agent
 			}
 			
 		}
 		
-		// create OSC message for music controller (for debug and real data)
-		
-		// check current active agents in system
-		agentGroupController.getActiveAgentsInSystem(agentController.agents);
-
-		// get returned mode from agent_group_controller
-		int mode = agentGroupController.getModeControl();
+		agentGroupController.getActiveAgentsInSystem(agentController.agents); // check current active agents in system
+		int mode = agentGroupController.getModeControl(); // get returned mode from agentGroupController
 
 		Point2D centroid = agentGroupController.centroid;
-		
-		// map centroid position to music space
-		Point2D mappedCentroidPosition = mapProcessingSpaceToMusicSpace(centroid.getX(), centroid.getY());
+		Point2D mappedCentroidPosition = mapProcessingSpaceToMusicSpace(centroid.getX(), centroid.getY()); // map centroid position to music space
 		
 		ArrayList<Agent> activeAgents = agentGroupController.activeAgentsInSystem;
 		int numberOfActiveAgents = activeAgents.size();
 
 		// create OSC message for music-controller
 		OscMessage oscMessage = new OscMessage("/position");
+        oscMessage.add(mode);  // OSC message field = interaction mode (int)
+		oscMessage.add(numberOfActiveAgents); // OSC message field = number of active agents (int)
+		oscMessage.add(mappedCentroidPosition.getX()); // OSC message field = x for centroid (float)
+		oscMessage.add(mappedCentroidPosition.getY()); // OSC message field = y for centroid (float)
 
-        // OSC message field = interaction mode (int)
-        oscMessage.add(mode);
-		
-        // OSC message field = number of active agents (int)
-		oscMessage.add(numberOfActiveAgents);
-
-		// OSC message field = x for centroid (float)
-		oscMessage.add(mappedCentroidPosition.getX());
-
-		// OSC message field = y for centroid (float)
-		oscMessage.add(mappedCentroidPosition.getY());
-
-/*		for (int i = 0; i < numberOfActiveAgents; i++) {
-
-			Agent currentAgent = activeAgents.get(i);
-			
-			// OSC message field = agent id (int)
-			oscMessage.add(currentAgent.getAgentId());
-			
-			// map agent position to music space
-			Point2D mappedAgentPosition = mapProcessingSpaceToMusicSpace(currentAgent.getX(), currentAgent.getY());
-			
-			// calculate mapped agent position from mapped centroid position
-			float agentDistanceFromCentroid = PApplet.dist( mappedAgentPosition.getX(), mappedAgentPosition.getY(), 
-					                                        mappedCentroidPosition.getX(), mappedCentroidPosition.getY());
-			
-			// OSC message field = agent distance from centroid (float)
-			oscMessage.add(agentDistanceFromCentroid);
-		}*/
-		
-		if(debugMode) {
+		if(debugMode) { // send osc-music message to the event destination for music controller on debug mode
 			oscP5.send(oscMessage, eventDestinationForDebugMusicOscPackages);
 		}
-		
-		oscP5.send(oscMessage, eventDestinationForMusicOscPackages);
+		oscP5.send(oscMessage, eventDestinationForMusicOscPackages); // send osc-music message to the real music event destination
 
 	}
 	
@@ -429,12 +348,12 @@ public class LedLightController extends PApplet
 			
 			for (int i = 0; i < numberOfAgents; i++) {
 				
-				Agent currentagent = agentsInKinectSpace.get(i);
-				if (!currentagent.isActive()) {
+				Agent currentAgent = agentsInKinectSpace.get(i);
+				if (!currentAgent.isActive()) {
 					continue;
 				}
 				
-				float currentDistance = dist(currentagent.getX(), currentagent.getY(), transformedMouseX, transformedMouseY);
+				float currentDistance = dist(currentAgent.getX(), currentAgent.getY(), transformedMouseX, transformedMouseY);
 				if (currentDistance < minimumDistance) {
 					minimumDistance = currentDistance;
 					draggedAgentIndex = i;
@@ -450,19 +369,16 @@ public class LedLightController extends PApplet
 		
 		if (debugMode) {
 			
-			// check if agent is selected
-			if (draggedAgentIndex == -1) {
+			if (draggedAgentIndex == -1) { // check if agent is selected
 				return;
 			}
 			
-			// transform window-click space in kinect space 
+			// map window-click space in kinect space 
 			float transformedMouseX = constrain(map(mouseX, 0, width, minKinectWidth, maxKinectWidth), minKinectWidth, maxKinectWidth);
 			float transformedMouseY = constrain(map(mouseY, 0, height, maxKinectHeight, minKinectHeight), minKinectHeight, maxKinectHeight);
 			
-			// get selected agent from array
-			Agent agent = agentsInKinectSpace.get(draggedAgentIndex);
-			// set agent's new position
-			agent.setAgentPosition( transformedMouseX, transformedMouseY);
+			Agent agent = agentsInKinectSpace.get(draggedAgentIndex); // get selected agent from array
+			agent.setAgentPosition( transformedMouseX, transformedMouseY); // set agent's new position
 		}
 		
 	}
@@ -477,14 +393,11 @@ public class LedLightController extends PApplet
 				
 				if (numberOfActiveAgentsInKinectSpace < 5) {
 					
-					for (int i = 0; i < 5; i++) {
-						
+					for (int i = 0; i < 5; i++) { // loop all agents
 						Agent agent = agentsInKinectSpace.get(i);
-						
-						// set new agent to the first free position in array
-						if (!agent.isActive()) {
+						if (!agent.isActive()) { // set new agent to the first free position in array
 							
-							// transform window-click space in kinect space
+							// map window-click space in kinect space
 							agent.setAgentPosition( map(mouseX, 0, width, minKinectWidth, maxKinectWidth),
 						                            map(mouseY, 0, height, maxKinectHeight, minKinectHeight));
 							agent.setActive(true);
@@ -494,7 +407,6 @@ public class LedLightController extends PApplet
 								System.out.println("\nAgent is active: AgentId = " + i + ", PositionInKinectSpace = (" + agent.getX() + ", " + agent.getY() + "), " +
 										           "NumberOfActiveAgents = " + numberOfActiveAgentsInKinectSpace);
 							}
-							
 							return;
 						}
 					}
@@ -520,20 +432,18 @@ public class LedLightController extends PApplet
 	}
 	
 
-	// processing method keyPressed()
+	// processing method keyPressed() - prints music-controller osc messages
 	public void keyPressed()
 	{
 		if (debugMode) {
-			// initialize music controller (listener)
-			if (key == 'm') {
+			if (key == 'm') { // initialize music controller (listener)
 				musicController.printOscMessages();
 			}
 		}
-		
 	}
 	
-	
-	
+	//private PApplet pApplet;
+	// default constructor
 	public LedLightController()
 	{
 		super();

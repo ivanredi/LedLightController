@@ -1,10 +1,7 @@
 
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Random;
 import java.util.concurrent.Semaphore;
 import processing.core.*;
 import oscP5.*;
@@ -16,6 +13,7 @@ import oscP5.*;
  */
 public class AgentController implements OscEventListener
 {
+	// Number of maximum agents in system
 	private static final int MAX_ACTIVE_AGENTS = 5;
 
 	// Time interval between two consecutive agent position updates, in milliseconds.
@@ -24,36 +22,15 @@ public class AgentController implements OscEventListener
 	// list of agents
 	public ArrayList<Agent> agents;
 	public int numberOfActiveAgents;
-
-	private int minSpaceWidth;
-	private int maxSpaceWidth;
-
-	private int minSpaceHeight;
-	private int maxSpaceHeight;
-
-	private int minKinectWidth;
-	private int maxKinectWidth;
-
-	private int minKinectHeight;
-	private int maxKinectHeight;
-	
 	private float maxAgentStepSize;
 
-	private int radius;
+	//private int radius;
 
 	// OSC network variable for led-light event listener
 	private OscP5 oscP5;
 	
 	private FileWriter fileWriter;
 
-	private OscMessage[] latestOscMessages = new OscMessage[MAX_ACTIVE_AGENTS];
-	// Initialize messages to null.
-	{
-		for (int i = 0; i < latestOscMessages.length; i++) {
-			latestOscMessages[i] = null;
-		}
-	}
-	
 	private int nextOscMessageIndex = 0;
 
 	public Semaphore controlOscMessagesAccess = new Semaphore(1, true);
@@ -62,21 +39,14 @@ public class AgentController implements OscEventListener
 	
 	private boolean saveMode;
 	
-	 // A thread that periodically updates agent positions
-	private Thread updaterThread = new Thread(new Runnable() {
-		
-		@Override
-		public void run()
-		{
-			runUpdaterThread();
-		}
-	});
+	// arrays for space and kinnect coordinates
+	private ArrayList<Integer> kinectCoordinates = new ArrayList<Integer>();
+	private ArrayList<Integer> bufferCoordinates = new ArrayList<Integer>();
 	
-	// constructor
-	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filePath)
+	// constructor without radius
+	public AgentController(boolean saveMode, float maxAgentStepSize, int kinectPort, String filePath)
 	{
 		super();
-		this.radius = radius;
 		this.saveMode = saveMode;
 		this.maxAgentStepSize = maxAgentStepSize;
 
@@ -91,7 +61,29 @@ public class AgentController implements OscEventListener
 		
 		updaterThread.start();
 
-		// registerAgentsAndSetDirections();
+		// OSC- network listener initialization
+		oscP5 = new OscP5(this, kinectPort);
+	}
+	
+	
+	// constructor with radius
+	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filePath)
+	{
+		super();
+		//this.radius = radius;
+		this.saveMode = saveMode;
+		this.maxAgentStepSize = maxAgentStepSize;
+
+		try {
+			fileWriter = new FileWriter(filePath, true);
+		} catch (IOException e) {
+			
+		}
+		
+		// initialize 5 agents
+		initializeAgents();
+		
+		updaterThread.start();
 
 		// OSC- network listener initialization
 		oscP5 = new OscP5(this, kinectPort);
@@ -108,32 +100,32 @@ public class AgentController implements OscEventListener
 		numberOfActiveAgents = 0;
 	}
 
-	// initialize buffer coordinates
-	public void setBufferCoordinates(int minSpaceWidth, int maxSpaceWidth,
-			int minSpaceHeight, int maxSpaceHeight)
+	// set buffer coordinates
+	public void setBufferCoordinates(int minSpaceWidth, int maxSpaceWidth, int minSpaceHeight, int maxSpaceHeight)
 	{
-		this.minSpaceWidth = minSpaceWidth;
-		this.maxSpaceWidth = maxSpaceWidth;
-		this.minSpaceHeight = minSpaceHeight;
-		this.maxSpaceHeight = maxSpaceHeight;
-	}
 
-	// initialize kinect coordinates
-	public void setKinectCoordinates(int minKinectWidth, int maxKinectWidth,
-			int minKinectHeight, int maxKinectHeight)
+		bufferCoordinates.add(minSpaceWidth);
+		bufferCoordinates.add(maxSpaceWidth);
+		bufferCoordinates.add(minSpaceHeight);
+		bufferCoordinates.add(maxSpaceHeight);
+		
+	}
+	
+	// set kinect coordinates
+	public void setKinectCoordinates(int minKinectWidth, int maxKinectWidth, int minKinectHeight, int maxKinectHeight)
 	{
-		this.minKinectWidth = minKinectWidth;
-		this.maxKinectWidth = maxKinectWidth;
-		this.minKinectHeight = minKinectHeight;
-		this.maxKinectHeight = maxKinectHeight;
+		kinectCoordinates.add(minKinectWidth);
+		kinectCoordinates.add(maxKinectWidth);
+		kinectCoordinates.add(minKinectHeight);
+		kinectCoordinates.add(maxKinectHeight);
 	}
 
 	// adjust kinect coordinate space to processing coordinate space
 	private void setMappedAgentCoord(Agent agent, float xCood, float yCoord)
 	{
 
-		float xNew = PApplet.map(xCood, minKinectWidth, maxKinectWidth, minSpaceWidth, maxSpaceWidth);
-		float yNew = PApplet.map(yCoord, maxKinectHeight, minKinectHeight, minSpaceHeight, maxSpaceHeight);
+		float xNew = PApplet.map(xCood, kinectCoordinates.get(0), kinectCoordinates.get(1), bufferCoordinates.get(0), bufferCoordinates.get(1));
+		float yNew = PApplet.map(yCoord, kinectCoordinates.get(3), kinectCoordinates.get(2), bufferCoordinates.get(2), bufferCoordinates.get(3));
 		agent.setAgentPosition(xNew, yNew);
 	}
 	
@@ -158,6 +150,17 @@ public class AgentController implements OscEventListener
 		newPosition.setY(yNew);
 	}
 	
+	 // A thread that periodically updates agent positions
+	private Thread updaterThread = new Thread(new Runnable() {
+		
+		@Override
+		public void run()
+		{
+			runUpdaterThread();
+		}
+	});
+
+	
 	/**
 	 * Run function of a thread that periodically updates agent positions,
 	 * based on the latest Osc message recieved.
@@ -169,7 +172,6 @@ public class AgentController implements OscEventListener
 			try {
 				controlOscMessagesAccess.acquire();
 			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 			OscMessage[] latestOscMessages = this.latestOscMessages.clone();
@@ -197,6 +199,15 @@ public class AgentController implements OscEventListener
 		}
 	}
 	
+	private OscMessage[] latestOscMessages = new OscMessage[MAX_ACTIVE_AGENTS];
+	// Initialize messages to null.
+	{
+		for (int i = 0; i < latestOscMessages.length; i++) {
+			latestOscMessages[i] = null;
+		}
+	}
+	
+	
 	/**
 	 * Update agents based on the latest Osc message recieved.
 	 * @param oscMessage 
@@ -219,14 +230,16 @@ public class AgentController implements OscEventListener
 			float xPosition;
 			float yPosition;
 			float nearestAgentDistance;
+			
 			float angle;
+			
 			try {
 				agentId = (Integer) messageArguments[0];
 				isActive = ((Integer) messageArguments[1]) != 0;
 				xPosition = (Float) messageArguments[2];
 				yPosition = (Float) messageArguments[3];
 				nearestAgentDistance = (Float) messageArguments[4];
-				angle = (Float) messageArguments[5];// ignore
+				angle = (Float) messageArguments[5];
 			} catch (Exception e1) {
 				e1.printStackTrace();
 				return;
@@ -243,14 +256,6 @@ public class AgentController implements OscEventListener
 			controlAgentArrayAccess.release();
 			
 			boolean wasActive = oldAgent.isActive();
-			if (isActive && ! wasActive) {
-				numberOfActiveAgents++;		// became active
-			}
-			if (wasActive && ! isActive) {
-				numberOfActiveAgents--;		// became inactive
-			}
-			
-
 			// update agent
 			Agent newAgent = new Agent(agentId);
 			newAgent.setActive(isActive);
@@ -260,6 +265,23 @@ public class AgentController implements OscEventListener
 			if (wasActive) {
 				smoothMovement(oldAgent, newAgent);
 			}
+
+			if (isActive && ! wasActive) {
+				numberOfActiveAgents++;		// became active
+			}
+			if (wasActive && ! isActive) {
+				if (nearestEdgeDistanceFromAgent(oldAgent) < maxAgentStepSize) {
+					numberOfActiveAgents--;		// became inactive
+				} else {
+					
+					// he couldn't have got out that fast, it must be a glitch
+					
+					newAgent.setX(oldAgent.getX());
+					newAgent.setY(oldAgent.getY());
+					newAgent.setActive(true);
+				}
+			}
+			
 
 			newAgent.setNearestAgentDistance(nearestAgentDistance);
 
@@ -274,6 +296,23 @@ public class AgentController implements OscEventListener
 			
 			controlAgentArrayAccess.release();
 		}
+	}
+	
+	public float nearestEdgeDistanceFromAgent(Agent agent)
+	{
+		float x = agent.getX();
+		float y = agent.getY();
+		float nearestDistance = x;
+		if (y < nearestDistance) {
+			nearestDistance = y;
+		}
+		if (bufferCoordinates.get(1) - x < nearestDistance) {
+			nearestDistance = bufferCoordinates.get(1) - x ;
+		}
+		if (bufferCoordinates.get(3) - y < nearestDistance) {
+			nearestDistance = bufferCoordinates.get(3) - y ;
+		}
+		return nearestDistance;
 	}
 
 	public void oscEvent(OscMessage theOscMessage)
