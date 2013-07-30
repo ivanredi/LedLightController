@@ -27,6 +27,7 @@ public class Agent implements Point2D
 	// angle form agent to (0, 0) point
 	private float angle;
 	
+	private int inactiveCyclesCount = 0;
 
 	//agent constructor
 	public Agent(int agentId)
@@ -38,6 +39,16 @@ public class Agent implements Point2D
 		this.distanceFromNearestAgent = 0;
 		//this.distanceFromCentroid = 0;
 		this.angle = 0;
+	}
+	
+	public void setInactiveCyclesCount(int duration)
+	{
+		inactiveCyclesCount = duration;
+	}
+	
+	public int getInactiveCyclesCount()
+	{
+		return inactiveCyclesCount;
 	}
 	
 	public void setAgentPosition(float xPos, float yPos)

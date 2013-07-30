@@ -11,7 +11,7 @@ public class LedLightStripPanelRendererFactory
 		TOP_LEFT,
 		TOP_RIGHT,
 		BOTTOM_LEFT,
-		BORROM_RIGHT;
+		BOTTOM_RIGHT;
 		
 		public boolean isTop()
 		{

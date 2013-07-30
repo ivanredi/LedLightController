@@ -1,6 +1,4 @@
 
-
-import java.io.File;
 import java.util.ArrayList;
 import processing.core.*;
 import oscP5.*;
@@ -18,11 +16,14 @@ public class LedLightController extends PApplet
 	private static final long serialVersionUID = -8381361181536369840L;
 	
 	// debug and print modes
-	boolean debugMode = false;
+	boolean debugMode = true;
 	boolean printMode = true;
-	boolean runLedSimulator = true;
+	boolean runLedScreen = true;
 	boolean printAgentsPositions = false;
-
+	boolean fileSaveMode = false; // save OSC packages to the file
+	String filesDestination = "RPC";
+	int maximumInactiveDuration = 10000;	// Time interval before a questionably inactive agent disappears, in milliseconds.
+	
 	// agents space size
 	float[] adjustBrightness = { 0.005f, // 1 active agent
 			                     1.0f, // 2 active agents
@@ -39,9 +40,6 @@ public class LedLightController extends PApplet
 			              }; 
 	
 	float maxDistanceFromCentroid = 5.0f; 	// maximum range for the agent to stay in the group
-	
-	boolean fileSaveMode = false; // save OSC packages to the file
-	String filePath = "oscpackages.txt";
 	
 	// KINECT SPACE COORDINATES
 	int minKinectWidth = -100;
@@ -117,9 +115,9 @@ public class LedLightController extends PApplet
 
 		// agent_controller initialization
 		if (! debugMode) { // listening port based on debug mode
-			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filePath);
+			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filesDestination, maximumInactiveDuration);
 		} else {
-			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, debugKinectPort, filePath);
+			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, debugKinectPort, filesDestination, maximumInactiveDuration);
 		}
 		// forward coordinates to the agent controller
 		agentController.setBufferCoordinates(minProcessingSpaceWidth, maxProcessingSpaceWidth, minProcessingSpaceHeight, maxProcessingSpaceHeight);
@@ -132,7 +130,7 @@ public class LedLightController extends PApplet
 		// initialize agent_group_controller with agents in system; set max distance from centroid
 		agentGroupController = new AgentGroupController(agentController.agents, maxDistanceFromCentroid);
 		
-		if (runLedSimulator) { // led simulator is turned on
+		if (runLedScreen) { // led simulator is turned on
 			//crate screen for LED simulator 
 			LedScreen.buffer = this.pGraphicsBuffer;
 			LedScreen.setWidth = ledScreenWidth;
@@ -181,7 +179,7 @@ public class LedLightController extends PApplet
 			}
 		}
 		
-		if (runLedSimulator) { // led simulator is turned on
+		if (runLedScreen) { // led simulator is turned on
 			try { // provide thread safe rendering on LED simulator with semaphore
 				LedScreen.allowBufferRenderer.acquire();
 			} catch (InterruptedException e1) {
@@ -196,7 +194,7 @@ public class LedLightController extends PApplet
 		
 		pGraphicsBuffer.endDraw(); // close buffer
 
-		if (runLedSimulator) { // led simulator is turned on
+		if (runLedScreen) { // led simulator is turned on
 			LedScreen.allowBufferRenderer.release(); // release semaphore for led simulator
 		}
 		
@@ -206,6 +204,13 @@ public class LedLightController extends PApplet
 		pGraphicsBuffer.removeCache(pImage); // delete memory cache
 		g.removeCache(pImage);
 		
+	}
+
+	@Override
+	public void destroy()
+	{
+		background(0);
+		super.destroy();
 	}
 
 	/**
@@ -476,7 +481,7 @@ public class LedLightController extends PApplet
 								this.debugMode = debugMode;
 								this.printMode = printMode;
 								this.printAgentsPositions = printAgentsPositions;
-								this.runLedSimulator = runLedSimulator;
+								this.runLedScreen = runLedSimulator;
 								this.maxAgentStepSize = maxAgentStepSize;
 								//this.pApplet = pApplet;
 							}

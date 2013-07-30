@@ -1,7 +1,11 @@
 
+
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.concurrent.Semaphore;
 import processing.core.*;
 import oscP5.*;
@@ -13,12 +17,15 @@ import oscP5.*;
  */
 public class AgentController implements OscEventListener
 {
+	// Time interval before a questionably inactive agent disappears, in milliseconds.
+	private final int MAX_INACTIVE_DURATION;
+
 	// Number of maximum agents in system
 	private static final int MAX_ACTIVE_AGENTS = 5;
 
 	// Time interval between two consecutive agent position updates, in milliseconds.
 	private static final int AGENT_UPDATER_THREAD_CYCLE_LENGTH = 66;
-	
+
 	// list of agents
 	public ArrayList<Agent> agents;
 	public int numberOfActiveAgents;
@@ -28,8 +35,6 @@ public class AgentController implements OscEventListener
 
 	// OSC network variable for led-light event listener
 	private OscP5 oscP5;
-	
-	private FileWriter fileWriter;
 
 	private int nextOscMessageIndex = 0;
 
@@ -38,20 +43,34 @@ public class AgentController implements OscEventListener
 	public Semaphore controlAgentArrayAccess = new Semaphore(1, true);
 	
 	private boolean saveMode;
+
+	// file writer variables
+	private FileWriter fileWriter;
+	private static final int MAX_NUMBER_OF_BYTES = 2097152;
+	private int fileByteCounter = 0;
+	private String fileName;
+	private String filePath;
+	private String filesDestination;
 	
 	// arrays for space and kinnect coordinates
 	private ArrayList<Integer> kinectCoordinates = new ArrayList<Integer>();
 	private ArrayList<Integer> bufferCoordinates = new ArrayList<Integer>();
 	
 	// constructor without radius
-	public AgentController(boolean saveMode, float maxAgentStepSize, int kinectPort, String filePath)
+	public AgentController(boolean saveMode, float maxAgentStepSize, int kinectPort, String filesDestination, int maxInactiveDuration)
 	{
 		super();
 		this.saveMode = saveMode;
 		this.maxAgentStepSize = maxAgentStepSize;
-
+		this.MAX_INACTIVE_DURATION = maxInactiveDuration;
+		
+		this.filesDestination = filesDestination;
+		String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(Calendar.getInstance().getTime());
+		this.fileName = "RPC-" + timeStamp.trim() + ".txt";
+		this.filePath = this.filesDestination + "/" + this.fileName;
+		makeFolder(filePath);
 		try {
-			fileWriter = new FileWriter(filePath, true);
+			fileWriter = new FileWriter(filePath, true); 
 		} catch (IOException e) {
 			
 		}
@@ -67,15 +86,22 @@ public class AgentController implements OscEventListener
 	
 	
 	// constructor with radius
-	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filePath)
+	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filesDestination, int maxInactiveDuration)
 	{
 		super();
 		//this.radius = radius;
 		this.saveMode = saveMode;
 		this.maxAgentStepSize = maxAgentStepSize;
-
+		this.MAX_INACTIVE_DURATION = maxInactiveDuration;
+		
+		this.filesDestination = filesDestination;
+		String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(Calendar.getInstance().getTime());
+		this.fileName = "RPC-" + timeStamp.trim() + ".txt";
+		this.filePath = this.filesDestination + "/" +  this.fileName;
+		makeFolder(filePath);
+		
 		try {
-			fileWriter = new FileWriter(filePath, true);
+			fileWriter = new FileWriter(filePath, true); 
 		} catch (IOException e) {
 			
 		}
@@ -87,6 +113,7 @@ public class AgentController implements OscEventListener
 
 		// OSC- network listener initialization
 		oscP5 = new OscP5(this, kinectPort);
+		//oscP5.addListener(this);//for print stack trace
 	
 	}
 
@@ -200,6 +227,7 @@ public class AgentController implements OscEventListener
 	}
 	
 	private OscMessage[] latestOscMessages = new OscMessage[MAX_ACTIVE_AGENTS];
+
 	// Initialize messages to null.
 	{
 		for (int i = 0; i < latestOscMessages.length; i++) {
@@ -231,6 +259,7 @@ public class AgentController implements OscEventListener
 			float yPosition;
 			float nearestAgentDistance;
 			
+			@SuppressWarnings("unused")
 			float angle;
 			
 			try {
@@ -270,7 +299,7 @@ public class AgentController implements OscEventListener
 				numberOfActiveAgents++;		// became active
 			}
 			if (wasActive && ! isActive) {
-				if (nearestEdgeDistanceFromAgent(oldAgent) < maxAgentStepSize) {
+				if (nearestEdgeDistanceFromAgent(oldAgent) < maxAgentStepSize || oldAgent.getInactiveCyclesCount() > MAX_INACTIVE_DURATION / AGENT_UPDATER_THREAD_CYCLE_LENGTH) {
 					numberOfActiveAgents--;		// became inactive
 				} else {
 					
@@ -279,6 +308,7 @@ public class AgentController implements OscEventListener
 					newAgent.setX(oldAgent.getX());
 					newAgent.setY(oldAgent.getY());
 					newAgent.setActive(true);
+					newAgent.setInactiveCyclesCount(oldAgent.getInactiveCyclesCount() + 1);
 				}
 			}
 			
@@ -332,13 +362,46 @@ public class AgentController implements OscEventListener
 		controlOscMessagesAccess.release();
 		
 		if (saveMode) {
+
+			// if achieved MAX_NUMBER_OF_BYTES create new file
+			if( fileByteCounter >= MAX_NUMBER_OF_BYTES) {
+				
+				try {
+					fileWriter.close();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
+				fileByteCounter = 0;
+				
+				// create new file
+				String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(Calendar.getInstance().getTime());
+				this.fileName = "RPC-" + timeStamp.trim() + ".txt";
+				this.filePath = this.filesDestination + "/" + this.fileName;
+				try {
+					fileWriter = new FileWriter(filePath, true); 
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
 			// save osc-message in file
 			Object[] messageArguments = theOscMessage.arguments();
 			try {
-				for (int i = 0; i < messageArguments.length; i++) {
-					appendFile(messageArguments[i].toString() + "\t");
+				// get second value in message arguments
+				int userActivity = (Integer) messageArguments[1];
+				
+				// save only active user arguments
+				if(userActivity == 1) {
+					
+					for (int i = 0; i < messageArguments.length; i++) {
+						appendFile(messageArguments[i].toString() + "\t");
+						
+					}
+					appendFile("\r\n");
+
 				}
-				appendFile("\r\n");
+				
 			} catch (IOException e) {
 				e.printStackTrace();
 
@@ -346,14 +409,22 @@ public class AgentController implements OscEventListener
 		}
 	}
 
-	public void oscStatus(OscStatus theStatus)
-	{
-	}
-
 	public void appendFile(String text) throws IOException
 	{
 		fileWriter.write(text);
-		fileWriter.flush();
+		fileByteCounter += text.length();
 	}
+	
+	private void makeFolder(String filePath)
+	{
+		File file = new File(filePath).getAbsoluteFile().getParentFile();
+		if(!file.exists()) file.mkdirs();
+	}
+	
+	public void oscStatus(OscStatus theStatus)
+	{
 		
+	}
+
+
 }

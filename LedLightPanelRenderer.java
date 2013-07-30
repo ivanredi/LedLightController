@@ -134,10 +134,16 @@ public class LedLightPanelRenderer extends PGraphicsRenderer
 		// Remap color values from the pixel matrix to the corresponding connectors and universes
 		for (int i = 0; i < pixelsWidth; i++) {
 			for (int j = 0; j < pixelsHeight; j++) {
-				int currentConnector = coordinateConnectorUniversePixelMapping[i + x][j + y][0];
-				int currentUniverse = coordinateConnectorUniversePixelMapping[i + x][j + y][1];
-				int currentPixel = coordinateConnectorUniversePixelMapping[i + x][j + y][2];
-				connectorUniversesValues[currentConnector][currentUniverse][currentPixel] = colors[i][j];
+				try {
+					int currentConnector = coordinateConnectorUniversePixelMapping[i
+							+ x][j + y][0];
+					int currentUniverse = coordinateConnectorUniversePixelMapping[i
+							+ x][j + y][1];
+					int currentPixel = coordinateConnectorUniversePixelMapping[i
+							+ x][j + y][2];
+					connectorUniversesValues[currentConnector][currentUniverse][currentPixel] = colors[i][j];
+				} catch (ArrayIndexOutOfBoundsException e) {
+				}
 			}
 		}
 		
