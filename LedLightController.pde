@@ -19,6 +19,8 @@ public class LedLightController extends PApplet
 	boolean debugMode = true;
 	boolean printMode = true;
 	boolean runLedScreen = true;
+        boolean runSimulator = true;
+        boolean runArtNet = false;
 	boolean printAgentsPositions = false;
 	boolean fileSaveMode = false; // save OSC packages to the file
 	String filesDestination = "RPC";
@@ -135,6 +137,8 @@ public class LedLightController extends PApplet
 			LedScreen.buffer = this.pGraphicsBuffer;
 			LedScreen.setWidth = ledScreenWidth;
 			LedScreen.setHeight = ledScreenHeight;
+                        LedScreen.runSimulator = runSimulator;
+                        LedScreen.runArtNet = runArtNet;
 			PApplet.main(new String[] { LedScreen.class.getName() });
 		}
 		

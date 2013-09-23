@@ -20,6 +20,8 @@ public class LedScreen extends PApplet
 	public static int setWidth;// = 1232;
 	public static int setHeight;// = 880;
 	private static boolean screenTestMode = false;
+        public static boolean runSimulator = false;
+        public static boolean runArtNet = false;
 	
 	@Override
 	public void setup() 
@@ -32,29 +34,35 @@ public class LedScreen extends PApplet
 		}
 		// set window size 
 		size(setWidth, setHeight);
-		
-		LedPanelSimulator ledPanelSimulator1 = new LedPanelSimulator(this, 28, 40, 0, 0, 170, 3, this.width / 2, this.height);
-		LedPanelSimulator ledPanelSimulator2 = new LedPanelSimulator(this, 28, 40, 28, 0, 170, 1, this.width / 2, this.height);
-		LedLightStripPanelRendererFactory.StripPanelConfiguration[] panelconfigurations = new LedLightStripPanelRendererFactory.StripPanelConfiguration[2];
-		ArtNetConnector artNetConnector1 = new ArtNetConnector(new String[] {"192.168.0.210", "192.168.0.211"});
-		ArtNetConnector artNetConnector2 = new ArtNetConnector(new String[] {"192.168.0.214", "192.168.0.215"});
-		panelconfigurations[0] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(28, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.BOTTOM_LEFT, artNetConnector1);
-		panelconfigurations[1] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(0, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.BOTTOM_RIGHT, artNetConnector2);
-		LedLightPanelRenderer ledLightStripePanelRenderer = LedLightStripPanelRendererFactory.getLedLightStripPanelRenderer
-									  ( 56,
-				                        40, 
-				                        panelconfigurations
-									  );
-		ledLightPanelRenderers.add(ledLightStripePanelRenderer);
-		panelconfigurations = new LedLightStripPanelRendererFactory.StripPanelConfiguration[2];
-		panelconfigurations[0] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(0, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.TOP_LEFT, ledPanelSimulator1);
-		panelconfigurations[1] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(28, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.TOP_RIGHT, ledPanelSimulator2);
-		ledLightStripePanelRenderer = LedLightStripPanelRendererFactory.getLedLightStripPanelRenderer
-				  ( 56, 
-                  40, 
-                  panelconfigurations
-				  );
-		ledLightPanelRenderers.add(ledLightStripePanelRenderer);
+                if (runSimulator) {
+                  LedPanelSimulator ledPanelSimulator1 = new LedPanelSimulator(this, 28, 40, 28, 0, 170, 2, this.width / 2, this.height);
+                  LedPanelSimulator ledPanelSimulator2 = new LedPanelSimulator(this, 28, 40, 0, 0, 170, 0, this.width / 2, this.height);
+                  LedLightStripPanelRendererFactory.StripPanelConfiguration[] panelconfigurations = new LedLightStripPanelRendererFactory.StripPanelConfiguration[2];
+                  panelconfigurations[0] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(28, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.BOTTOM_LEFT, ledPanelSimulator1);
+                  panelconfigurations[1] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(0, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.BOTTOM_RIGHT, ledPanelSimulator2);
+                  LedLightPanelRenderer ledLightStripePanelRenderer = LedLightStripPanelRendererFactory.getLedLightStripPanelRenderer
+                                  ( 56,
+                                              40, 
+                                              panelconfigurations
+                                  );
+                  ledLightPanelRenderers.add(ledLightStripePanelRenderer);
+                } else {
+                  this.width = 0;
+                  this.height = 0;
+                }
+                if (runArtNet) {
+                  ArtNetConnector artNetConnector1 = new ArtNetConnector(new String[] {"192.168.0.210", "192.168.0.211"});
+                  ArtNetConnector artNetConnector2 = new ArtNetConnector(new String[] {"192.168.0.214", "192.168.0.215"});
+                  LedLightStripPanelRendererFactory.StripPanelConfiguration[] panelconfigurations = new LedLightStripPanelRendererFactory.StripPanelConfiguration[2];
+                  panelconfigurations[0] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(28, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.BOTTOM_LEFT, artNetConnector1);
+                  panelconfigurations[1] = new LedLightStripPanelRendererFactory.StripPanelConfiguration(0, 0, 28, 40, 170, LedLightStripPanelRendererFactory.Corner.BOTTOM_RIGHT, artNetConnector2);
+                  LedLightPanelRenderer ledLightStripePanelRenderer = LedLightStripPanelRendererFactory.getLedLightStripPanelRenderer
+                                  ( 56,
+                                              40, 
+                                              panelconfigurations
+                                  );
+                  ledLightPanelRenderers.add(ledLightStripePanelRenderer);
+                }
 	}
 	
 	@Override
