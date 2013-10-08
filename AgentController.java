@@ -20,6 +20,9 @@ public class AgentController implements OscEventListener
 	// Time interval before a questionably inactive agent disappears, in milliseconds.
 	private final int MAX_INACTIVE_DURATION;
 
+	// Time interval before a questionably inactive agent disappears, in milliseconds.
+	private final int MAX_INACTIVE_EDGE_DURATION;
+
 	// Number of maximum agents in system
 	private static final int MAX_ACTIVE_AGENTS = 5;
 
@@ -57,12 +60,13 @@ public class AgentController implements OscEventListener
 	private ArrayList<Integer> bufferCoordinates = new ArrayList<Integer>();
 	
 	// constructor without radius
-	public AgentController(boolean saveMode, float maxAgentStepSize, int kinectPort, String filesDestination, int maxInactiveDuration)
+	public AgentController(boolean saveMode, float maxAgentStepSize, int kinectPort, String filesDestination, int maxInactiveDuration, int maxInactiveEdgeDuration)
 	{
 		super();
 		this.saveMode = saveMode;
 		this.maxAgentStepSize = maxAgentStepSize;
 		this.MAX_INACTIVE_DURATION = maxInactiveDuration;
+		this.MAX_INACTIVE_EDGE_DURATION = maxInactiveEdgeDuration;
 		
 		this.filesDestination = filesDestination;
 		String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(Calendar.getInstance().getTime());
@@ -86,13 +90,14 @@ public class AgentController implements OscEventListener
 	
 	
 	// constructor with radius
-	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filesDestination, int maxInactiveDuration)
+	public AgentController(int radius, boolean saveMode, float maxAgentStepSize, int kinectPort, String filesDestination, int maxInactiveDuration, int maxInactiveEdgeDuration)
 	{
 		super();
 		//this.radius = radius;
 		this.saveMode = saveMode;
 		this.maxAgentStepSize = maxAgentStepSize;
 		this.MAX_INACTIVE_DURATION = maxInactiveDuration;
+		this.MAX_INACTIVE_EDGE_DURATION = maxInactiveEdgeDuration;
 		
 		this.filesDestination = filesDestination;
 		String timeStamp = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(Calendar.getInstance().getTime());
@@ -299,7 +304,7 @@ public class AgentController implements OscEventListener
 				numberOfActiveAgents++;		// became active
 			}
 			if (wasActive && ! isActive) {
-				if (nearestEdgeDistanceFromAgent(oldAgent) < maxAgentStepSize || oldAgent.getInactiveCyclesCount() > MAX_INACTIVE_DURATION / AGENT_UPDATER_THREAD_CYCLE_LENGTH) {
+				if ((nearestEdgeDistanceFromAgent(oldAgent) < maxAgentStepSize && oldAgent.getInactiveCyclesCount() > MAX_INACTIVE_EDGE_DURATION / AGENT_UPDATER_THREAD_CYCLE_LENGTH) || oldAgent.getInactiveCyclesCount() > MAX_INACTIVE_DURATION / AGENT_UPDATER_THREAD_CYCLE_LENGTH) {
 					numberOfActiveAgents--;		// became inactive
 				} else {
 					
@@ -347,6 +352,7 @@ public class AgentController implements OscEventListener
 
 	public void oscEvent(OscMessage theOscMessage)
 	{
+		long messageTimestamp = System.currentTimeMillis();
 		try {
 			controlOscMessagesAccess.acquire();
 		} catch (InterruptedException e1) {
@@ -398,7 +404,7 @@ public class AgentController implements OscEventListener
 						appendFile(messageArguments[i].toString() + "\t");
 						
 					}
-					appendFile("\r\n");
+					appendFile(messageTimestamp + "\r\n");
 
 				}
 				

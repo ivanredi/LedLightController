@@ -110,7 +110,16 @@ public class AgentGroupController
 		ArrayList<Agent> agentsInGroup = new ArrayList<Agent>();
 		
 		int numberOfActiveAgentsInSystem = activeAgentsInSystem.size();
-		
+
+                if (numberOfActiveAgentsInSystem == 2) {
+                  Agent agent1 = activeAgentsInSystem.get(0);
+                  Agent agent2 = activeAgentsInSystem.get(1);
+                  if (PApplet.dist(agent1.getX(), agent1.getY(), agent2.getX(), agent2.getY()) <= maxDistanceFromCentroid) {
+                    agentsInGroup.add(agent1);
+                    agentsInGroup.add(agent2);
+                  }
+                }
+		else {
 		for(int i = 0; i < numberOfActiveAgentsInSystem; i++) {
 			
 			Agent agent = activeAgentsInSystem.get(i);
@@ -123,7 +132,14 @@ public class AgentGroupController
 				agentsInGroup.add(agent);
 			}
 		}
-		
+                if (agentsInGroup.size() == 2) {
+                 Agent agent1 = agentsInGroup.get(0);
+                  Agent agent2 = agentsInGroup.get(1);
+                  if (PApplet.dist(agent1.getX(), agent1.getY(), agent2.getX(), agent2.getY()) > maxDistanceFromCentroid) {
+                    agentsInGroup = new ArrayList<Agent>();
+                  }
+                }
+		}
 		if (agentsInGroup.size() > 1) {
 			this.agentsInGroup = agentsInGroup;
 			groupIsCreated = true;

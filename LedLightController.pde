@@ -17,31 +17,33 @@ public class LedLightController extends PApplet
 	
 	// debug and print modes
 	boolean debugMode = true;
-	boolean printMode = true;
+	boolean printMode = false;
 	boolean runLedScreen = true;
         boolean runSimulator = true;
         boolean runArtNet = false;
 	boolean printAgentsPositions = false;
-	boolean fileSaveMode = false; // save OSC packages to the file
-	String filesDestination = "RPC";
-	int maximumInactiveDuration = 10000;	// Time interval before a questionably inactive agent disappears, in milliseconds.
+	boolean fileSaveMode = true; // save OSC packages to the file
+	String filesDestination = "/Users/ivanredi/Documents/RPC";
+	int maximumInactiveDuration = 3000;	// Time interval before a questionably inactive agent disappears, in milliseconds.
+	int maximumEdgeInactiveDuration = 1000;	// Time interval before a questionably inactive agent near the edge disappears, in milliseconds.
+	int maxColorStep = 5;
 	
 	// agents space size
-	float[] adjustBrightness = { 0.005f, // 1 active agent
-			                     1.0f, // 2 active agents
-			                     20.0f, // 3 active agents
-			                     400.0f, // 4 active agents
-			                     8000.0f // 5 active agents 
+	float[] adjustBrightness = { 	0.006f, // 1 active agent
+						            0.30f, // 2 active agents
+						            6.0f, // 3 active agents
+						            100.0f, // 4 active agents
+						            3000.0f // 5 active agents 
 			                    }; 
 	
 	// color values for each mode
 	int[][] adjustColor = { {255, 255, 255}, //mode 1
-			                {255, 0, 0}, //mode 2
-			                {0, 255, 0}, //mode 3
-			                {0, 255, 255} //mode 4
-			              }; 
+			                {255, 20, 0}, //mode 2
+			                {20, 250, 250}, //mode 3
+			                {50, 255, 50} //mode 4
+			              };
 	
-	float maxDistanceFromCentroid = 5.0f; 	// maximum range for the agent to stay in the group
+	float narrowRangeFromCentroid = 14.0f; 	// maximum range for the agent to stay in the narrow group
 	
 	// KINECT SPACE COORDINATES
 	int minKinectWidth = -100;
@@ -79,7 +81,7 @@ public class LedLightController extends PApplet
 
 	// CONTROLLERS INSTANCES
 	AgentController agentController;
-	AgentGroupController agentGroupController;
+	AgentGroupController agentNarrowGroupController;
 	int agentRadius = 0; // diameter of the surface that agent takes in space (not in use)
 	int systemMode = 0; // mode for agents group position
 	MusicController musicController; // music controller variables
@@ -89,10 +91,15 @@ public class LedLightController extends PApplet
 	ArrayList<Agent> previousAgentsState  = new ArrayList<Agent>(); //array for debug-print mode
 	int numberOfActiveAgentsInKinectSpace; // variable for kinect simulator and debug purposes 
 	int draggedAgentIndex = -1;  // variable for kinect simulator and debug purposes 
+	int[] currentColor = {255, 255, 255};
 	
 	// processing method setup()
 	public void setup()
 	{
+                frameRate(12);
+                for (int i = 0; i < 3; i++) {
+                  currentColor[i] = adjustColor[0][i];
+                }
 		oscP5 = new OscP5(this, 0); // osc-network initialization
 		
 		if (debugMode) { // create osc-event destinations for kinect-motion and music listener for debug mode
@@ -117,9 +124,9 @@ public class LedLightController extends PApplet
 
 		// agent_controller initialization
 		if (! debugMode) { // listening port based on debug mode
-			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filesDestination, maximumInactiveDuration);
+			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, kinectPort, filesDestination, maximumInactiveDuration, maximumEdgeInactiveDuration);
 		} else {
-			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, debugKinectPort, filesDestination, maximumInactiveDuration);
+			agentController = new AgentController(agentRadius, fileSaveMode, maxAgentStepSize, debugKinectPort, filesDestination, maximumInactiveDuration, maximumEdgeInactiveDuration);
 		}
 		// forward coordinates to the agent controller
 		agentController.setBufferCoordinates(minProcessingSpaceWidth, maxProcessingSpaceWidth, minProcessingSpaceHeight, maxProcessingSpaceHeight);
@@ -130,7 +137,7 @@ public class LedLightController extends PApplet
 		}
 		
 		// initialize agent_group_controller with agents in system; set max distance from centroid
-		agentGroupController = new AgentGroupController(agentController.agents, maxDistanceFromCentroid);
+		agentNarrowGroupController = new AgentGroupController(agentController.agents, narrowRangeFromCentroid);
 		
 		if (runLedScreen) { // led simulator is turned on
 			//crate screen for LED simulator 
@@ -141,13 +148,15 @@ public class LedLightController extends PApplet
                         LedScreen.runArtNet = runArtNet;
 			PApplet.main(new String[] { LedScreen.class.getName() });
 		}
-		
+		smooth();
+                strokeWeight(5);
 	}
 	
+  ArrayList<Point2D> oldPositions = new ArrayList<Point2D>();
 	// processing method draw()
 	public void draw() 
 	{
-		background(0);
+ 		//background(0);
 		sendAgentsStatusToControllers(); // refresh osc-messages
 
 		try { // check current active agents in system (provide save access to the agents array with semaphore)
@@ -155,11 +164,22 @@ public class LedLightController extends PApplet
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		agentGroupController.getActiveAgentsInSystem(agentController.agents);
+		agentNarrowGroupController.getActiveAgentsInSystem(agentController.agents);
 		agentController.controlAgentArrayAccess.release(); // release semaphore
 		
-		int mode = agentGroupController.getModeControl(); // returns mode from the AgentGroupController
-
+		int mode = agentNarrowGroupController.getModeControl(); // returns mode from the AgentGroupController
+		if (oldPositions.size() > 0) {
+                    for (int i = 0; i < oldPositions.size(); i++) {
+                      line(oldPositions.get(i).getX() * width / maxProcessingSpaceWidth, oldPositions.get(i).getY() * height / maxProcessingSpaceHeight, agentController.agents.get(i).getX() * width / maxProcessingSpaceWidth, agentController.agents.get(i).getY()  * height / maxProcessingSpaceHeight);
+                    }
+                    for (int i = 0; i < oldPositions.size(); i++) {
+                      oldPositions.set(i, new Point2DStruct(agentController.agents.get(i).getX(), agentController.agents.get(i).getY()));
+                    }
+                 } else {
+                    for (int i = 0; i < agentController.agents.size(); i++) {
+                      oldPositions.add(new Point2DStruct(agentController.agents.get(i).getX(), agentController.agents.get(i).getY()));
+                    }
+                 }
 		if (printMode) { // console print mode
 			
 			if (this.systemMode != mode) { // print system mode
@@ -202,11 +222,12 @@ public class LedLightController extends PApplet
 			LedScreen.allowBufferRenderer.release(); // release semaphore for led simulator
 		}
 		
-		PImage pImage = pGraphicsBuffer.get(); // display image from buffer in main screen
-		image(pImage, 0, 0, width, height);
+		//PImage pImage = pGraphicsBuffer.get(); // display image from buffer in main screen
+		//image(pImage, 0, 0, width, height);
 		
-		pGraphicsBuffer.removeCache(pImage); // delete memory cache
-		g.removeCache(pImage);
+		//pGraphicsBuffer.removeCache(pImage); // delete memory cache
+                
+		//g.removeCache(pImage);
 		
 	}
 
@@ -228,7 +249,7 @@ public class LedLightController extends PApplet
 	{
 		float[][] pixi = new float[buffer.width][buffer.height];
 		
-		int numberOfActiveAgents = agentGroupController.activeAgentsInSystem.size();
+		int numberOfActiveAgents = agentNarrowGroupController.activeAgentsInSystem.size();
 		if (numberOfActiveAgents > 0) {
 			
 			// loop matrix of pixels to set pixels value for darkness
@@ -238,13 +259,13 @@ public class LedLightController extends PApplet
 					float darkness = 1;
 					float minDarkness = Float.MAX_VALUE;
 					
-					int numberOfAgentsInGroup = agentGroupController.agentsInGroup.size();
+					int numberOfAgentsInGroup = agentNarrowGroupController.agentsInGroup.size();
 					// if group is created calculate darkness value of each pixel for agents in group
 					if (numberOfAgentsInGroup > 0) {
 						
 						for(int a = 0; a < numberOfAgentsInGroup; a++) { // loop agents in group
 							
-							Agent agent = agentGroupController.agentsInGroup.get(a);						
+							Agent agent = agentNarrowGroupController.agentsInGroup.get(a);						
 							float pixelDistFromAgent = dist(i, j, agent.getX(), agent.getY());
 							darkness *= pixelDistFromAgent;
 							
@@ -259,7 +280,7 @@ public class LedLightController extends PApplet
 					
 					for (int a = 0; a < numberOfActiveAgents; a++) { // loop all active agents in system
 						
-						Agent agent = agentGroupController.activeAgentsInSystem.get(a);						
+						Agent agent = agentNarrowGroupController.activeAgentsInSystem.get(a);						
 						float pixelDistFromAgent = dist(i, j, agent.getX(), agent.getY());
 						darkness *= pixelDistFromAgent;
 					}
@@ -276,20 +297,24 @@ public class LedLightController extends PApplet
 				}
 			}
 		}
-		
+		currentColor[0] = constrain(adjustColor[mode - 1][0], currentColor[0] - maxColorStep, currentColor[0] + maxColorStep);
+		currentColor[1] = constrain(adjustColor[mode - 1][1], currentColor[1] - maxColorStep, currentColor[1] + maxColorStep);
+		currentColor[2] = constrain(adjustColor[mode - 1][2], currentColor[2] - maxColorStep, currentColor[2] + maxColorStep);
 		//  loop matrix of pixels to coloring pixels
 		for (int i = 0; i < buffer.width; i++) { 
 			for (int j = 0; j < buffer.height; j++) {
 
 				float pixel = pixi[i][j] / 255.0f;
 				// set pixel color based on mode
-				buffer.stroke(adjustColor[mode - 1][0] * pixel, adjustColor[mode - 1][1] * pixel, adjustColor[mode - 1][2] * pixel, 255);
+				buffer.stroke(	currentColor[0] * pixel,
+								currentColor[1] * pixel,
+								currentColor[2] * pixel,
+								255);
 				buffer.point(i, j);// draw pixel point
 			}
 		}
 		
 	}
-	
 	void sendAgentsStatusToControllers()
 	{
 		
@@ -312,13 +337,13 @@ public class LedLightController extends PApplet
 			
 		}
 		
-		agentGroupController.getActiveAgentsInSystem(agentController.agents); // check current active agents in system
-		int mode = agentGroupController.getModeControl(); // get returned mode from agentGroupController
+		agentNarrowGroupController.getActiveAgentsInSystem(agentController.agents); // check current active agents in system
+		int mode = agentNarrowGroupController.getModeControl(); // get returned mode from agentGroupController
 
-		Point2D centroid = agentGroupController.centroid;
+		Point2D centroid = agentNarrowGroupController.centroid;
 		Point2D mappedCentroidPosition = mapProcessingSpaceToMusicSpace(centroid.getX(), centroid.getY()); // map centroid position to music space
 		
-		ArrayList<Agent> activeAgents = agentGroupController.activeAgentsInSystem;
+		ArrayList<Agent> activeAgents = agentNarrowGroupController.activeAgentsInSystem;
 		int numberOfActiveAgents = activeAgents.size();
 
 		// create OSC message for music-controller
@@ -479,7 +504,7 @@ public class LedLightController extends PApplet
 								this.kinectPort = kinectPort;
 								this.musicPort = musicPort;
 								this.musicPortForDebug = musicPortForDebug;
-								this.maxDistanceFromCentroid = maxDistanceFromCentroid;
+								this.narrowRangeFromCentroid = maxDistanceFromCentroid;
 								this.adjustBrightness = adjustBrightness;
 								this.adjustColor = adjustColor;
 								this.debugMode = debugMode;
