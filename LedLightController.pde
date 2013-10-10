@@ -1,4 +1,7 @@
 
+
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import processing.core.*;
 import oscP5.*;
@@ -16,14 +19,16 @@ public class LedLightController extends PApplet
 	private static final long serialVersionUID = -8381361181536369840L;
 	
 	// debug and print modes
-	boolean debugMode = true;
+	boolean debugMode = false;
 	boolean printMode = false;
 	boolean runLedScreen = true;
-        boolean runSimulator = true;
-        boolean runArtNet = false;
+	boolean runSimulator = false;
+	boolean runArtNet = false;
 	boolean printAgentsPositions = false;
-	boolean fileSaveMode = true; // save OSC packages to the file
+	boolean fileSaveMode = false; // save OSC packages to the file
+	boolean visualizationFileSaveMode = true;
 	String filesDestination = "/Users/ivanredi/Documents/RPC";
+	String visualizationFilesDestination = "/Users/ivanredi/Documents/RPC/Visualization/visualisationData.txt";
 	int maximumInactiveDuration = 3000;	// Time interval before a questionably inactive agent disappears, in milliseconds.
 	int maximumEdgeInactiveDuration = 1000;	// Time interval before a questionably inactive agent near the edge disappears, in milliseconds.
 	int maxColorStep = 5;
@@ -68,7 +73,7 @@ public class LedLightController extends PApplet
 	int ledScreenHeight = 880;
 
 	// OSC NETWORK INSTANCES
-	OscP5 oscP5;	
+	OscP5 oscP5;
 	int kinectPort = 7000;
 	int debugKinectPort = 6999;
 	int musicPort = 7001;
@@ -92,6 +97,8 @@ public class LedLightController extends PApplet
 	int numberOfActiveAgentsInKinectSpace; // variable for kinect simulator and debug purposes 
 	int draggedAgentIndex = -1;  // variable for kinect simulator and debug purposes 
 	int[] currentColor = {255, 255, 255};
+	
+	FileWriter visualizationDataFileWriter = null;
 	
 	// processing method setup()
 	public void setup()
@@ -148,11 +155,19 @@ public class LedLightController extends PApplet
                         LedScreen.runArtNet = runArtNet;
 			PApplet.main(new String[] { LedScreen.class.getName() });
 		}
+		
+		if (visualizationFileSaveMode) {
+			try {
+				visualizationDataFileWriter = new FileWriter(visualizationFilesDestination);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		smooth();
-                strokeWeight(5);
 	}
 	
-  ArrayList<Point2D> oldPositions = new ArrayList<Point2D>();
 	// processing method draw()
 	public void draw() 
 	{
@@ -165,21 +180,33 @@ public class LedLightController extends PApplet
 			e.printStackTrace();
 		}
 		agentNarrowGroupController.getActiveAgentsInSystem(agentController.agents);
-		agentController.controlAgentArrayAccess.release(); // release semaphore
 		
 		int mode = agentNarrowGroupController.getModeControl(); // returns mode from the AgentGroupController
-		if (oldPositions.size() > 0) {
-                    for (int i = 0; i < oldPositions.size(); i++) {
-                      line(oldPositions.get(i).getX() * width / maxProcessingSpaceWidth, oldPositions.get(i).getY() * height / maxProcessingSpaceHeight, agentController.agents.get(i).getX() * width / maxProcessingSpaceWidth, agentController.agents.get(i).getY()  * height / maxProcessingSpaceHeight);
-                    }
-                    for (int i = 0; i < oldPositions.size(); i++) {
-                      oldPositions.set(i, new Point2DStruct(agentController.agents.get(i).getX(), agentController.agents.get(i).getY()));
-                    }
-                 } else {
-                    for (int i = 0; i < agentController.agents.size(); i++) {
-                      oldPositions.add(new Point2DStruct(agentController.agents.get(i).getX(), agentController.agents.get(i).getY()));
-                    }
-                 }
+		
+		if (visualizationFileSaveMode) {
+			try {
+				visualizationDataFileWriter.append(String.valueOf(mode));
+				if (mode >= 2) {
+					visualizationDataFileWriter.append("\t" + agentNarrowGroupController.centroid.getX() + "\t" + agentNarrowGroupController.centroid.getY());
+				} else {
+					visualizationDataFileWriter.append("\t0\t0");
+				}
+				for (Agent agent : agentController.agents) {
+					boolean active = agent.isActive();
+					visualizationDataFileWriter.append("\t" + (active ? 1 : 0));
+				}
+				for (Agent agent : agentController.agents) {
+					visualizationDataFileWriter.append("\t" + agent.getX() + "\t" + agent.getY());
+				}
+				visualizationDataFileWriter.append("\t" + System.currentTimeMillis() + "\n");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		agentController.controlAgentArrayAccess.release(); // release semaphore
+		
 		if (printMode) { // console print mode
 			
 			if (this.systemMode != mode) { // print system mode
@@ -221,13 +248,12 @@ public class LedLightController extends PApplet
 		if (runLedScreen) { // led simulator is turned on
 			LedScreen.allowBufferRenderer.release(); // release semaphore for led simulator
 		}
+		PImage pImage = pGraphicsBuffer.get(); // display image from buffer in main screen
+		image(pImage, 0, 0, width, height);
 		
-		//PImage pImage = pGraphicsBuffer.get(); // display image from buffer in main screen
-		//image(pImage, 0, 0, width, height);
-		
-		//pGraphicsBuffer.removeCache(pImage); // delete memory cache
+		pGraphicsBuffer.removeCache(pImage); // delete memory cache
                 
-		//g.removeCache(pImage);
+		g.removeCache(pImage);
 		
 	}
 
